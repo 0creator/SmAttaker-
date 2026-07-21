@@ -11,6 +11,33 @@ from backend.models.user import User, UserStatus
 logger = logging.getLogger("smattaker.signals")
 
 
+def _fmt_price(price) -> str:
+    """
+    Adaptive price formatter.
+    Low-value cryptos (TRX $0.0334, SHIB $0.0000123, PEPE) need many
+    decimal places; high-value assets (BTC $68000, Gold $2400) need few.
+    Using a hardcoded :,.2f everywhere truncates small prices to $0.00
+    which is the bug the user saw (Entry $0.33 == TP $0.33).
+    """
+    if price is None:
+        return "—"
+    try:
+        p = float(price)
+    except (TypeError, ValueError):
+        return str(price)
+    if p == 0:
+        return "$0.00"
+    abs_p = abs(p)
+    if abs_p >= 1000:
+        return f"${p:,.2f}"        # BTC, ETH-high, Gold → 2 dp
+    elif abs_p >= 1:
+        return f"${p:,.4f}"        # $1–$999 → 4 dp (e.g. $68050.1234)
+    elif abs_p >= 0.01:
+        return f"${p:.6f}"         # $0.01–$1 → 6 dp (e.g. TRX $0.033450)
+    else:
+        return f"${p:.8f}"         # < $0.01 → 8 dp (SHIB, PEPE, etc.)
+
+
 async def broadcast_new_signal(signal: Signal, active_users: list[User]):
     """
     Broadcast a new trading signal to all active users.
@@ -43,7 +70,7 @@ async def broadcast_new_signal(signal: Signal, active_users: list[User]):
             if signal.take_profit_levels:
                 for tp in signal.take_profit_levels:
                     tp_lines += (
-                        f"   TP{tp.get('level', '')}: ${tp.get('price', 0):,.2f} "
+                        f"   TP{tp.get('level', '')}: {_fmt_price(tp.get('price', 0))} "
                         f"(+{tp.get('pct', 0)}%) [{tp.get('size_pct', 100)}%]\n"
                     )
 
@@ -54,8 +81,8 @@ async def broadcast_new_signal(signal: Signal, active_users: list[User]):
                 f"{direction_emoji} *NEW SIGNAL* — {asset_emoji} *{signal.symbol}*\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"*Direction:* {direction_text}\n"
-                f"*Entry:* ${signal.entry_price:,.2f}\n"
-                f"*Stop Loss:* ${signal.stop_loss:,.2f} (-{signal.stop_loss_pct:.2f}%)\n\n"
+                f"*Entry:* {_fmt_price(signal.entry_price)}\n"
+                f"*Stop Loss:* {_fmt_price(signal.stop_loss)} (-{signal.stop_loss_pct:.2f}%)\n\n"
                 f"*Take Profit:*\n{tp_lines}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"🤖 *Strategy:* {signal.strategy_type.replace('_', ' ').title()}\n"

@@ -133,6 +133,13 @@ async def lifespan(app: FastAPI):
     global scheduler
     try:
         scheduler = AsyncIOScheduler(timezone="UTC")
+        # ⚠️ CRITICAL FIX: the previous code used `next_run_time=None` which
+        # in APScheduler 3.x means "never run this job". The interval job
+        # would fire exactly ZERO times — the only run that ever happened
+        # was the separate "date" one-shot job below, which is why users saw
+        # signals appear ONCE at startup and then NOTHING for hours.
+        # Setting next_run_time=now makes the first run fire immediately and
+        # every subsequent run fire on the interval (15 min) forever.
         scheduler.add_job(
             _scheduled_strategy_run,
             "interval",
@@ -140,16 +147,12 @@ async def lifespan(app: FastAPI):
             id="strategy_run",
             max_instances=1,       # never run two cycles concurrently
             coalesce=True,         # if we fell behind, run once, not N times
-            next_run_time=None,    # don't fire instantly at boot; wait one interval
+            next_run_time=datetime.now(timezone.utc),  # fire first run immediately, then every interval
         )
         scheduler.start()
-        # Kick off one run shortly after boot so signals appear without
-        # waiting a full interval, but don't block startup on it.
-        scheduler.add_job(
-            _scheduled_strategy_run,
-            "date",
-            id="strategy_run_initial",
-        )
+        # NOTE: the old separate "date" one-shot job is no longer needed —
+        # the interval job now fires its first run immediately (next_run_time
+        # = now) and then repeats every STRATEGY_RUN_INTERVAL_MINUTES.
         logger.info(
             f"  ✅ Strategy scheduler running "
             f"(every {settings.STRATEGY_RUN_INTERVAL_MINUTES} min)"
@@ -889,6 +892,21 @@ async def dashboard_page(token: str = ""):
         }
     }
 
+    // Adaptive price formatter — small cryptos (TRX, SHIB, PEPE) need
+    // many decimals; high-value assets (BTC, Gold) need few. Showing
+    // everything with 2 decimals truncates $0.0334 to $0.03 which is
+    // the bug the user saw.
+    function fmtPrice(p) {
+        if (p === null || p === undefined) return '—';
+        const n = Number(p);
+        if (!isFinite(n) || n === 0) return '$0.00';
+        const abs = Math.abs(n);
+        if (abs >= 1000) return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (abs >= 1)      return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4});
+        if (abs >= 0.01)   return '$' + n.toFixed(6);
+        return '$' + n.toFixed(8);
+    }
+
     async function loadSignals() {
         const res = await authFetch('/api/signals/active');
         const json = await res.json();
@@ -904,8 +922,8 @@ async def dashboard_page(token: str = ""):
                     <span class="badge ${s.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${s.direction.toUpperCase()}</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-xs">
-                    <div><div class="text-muted">Entry</div><div class="font-semibold">${s.entry_price}</div></div>
-                    <div><div class="text-muted">Stop Loss</div><div class="font-semibold text-loss">${s.stop_loss}</div></div>
+                    <div><div class="text-muted">Entry</div><div class="font-semibold">${fmtPrice(s.entry_price)}</div></div>
+                    <div><div class="text-muted">Stop Loss</div><div class="font-semibold text-loss">${fmtPrice(s.stop_loss)}</div></div>
                     <div><div class="text-muted">Take Profit</div><div class="font-semibold text-win">${(s.take_profit_levels && s.take_profit_levels[0]) ? s.take_profit_levels[0].price : '—'}</div></div>
                 </div>
                 <div class="text-xs text-muted mt-3">Confidence: ${(s.confidence_score||0).toFixed(1)}% · ${s.strategy_type}</div>
@@ -1678,6 +1696,18 @@ async def admin_panel():
         });
     });
 
+    // Adaptive price formatter
+    function fmtPrice(p) {
+        if (p === null || p === undefined) return '—';
+        const n = Number(p);
+        if (!isFinite(n) || n === 0) return '$0.00';
+        const abs = Math.abs(n);
+        if (abs >= 1000) return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (abs >= 1)      return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4});
+        if (abs >= 0.01)   return '$' + n.toFixed(6);
+        return '$' + n.toFixed(8);
+    }
+
     function statusBadge(status) {
         const map = {
             // Signal statuses
@@ -1707,8 +1737,8 @@ async def admin_panel():
                     <td class="px-5 py-3 font-semibold text-white">${s.symbol}</td>
                     <td class="px-5 py-3"><span class="badge ${s.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${(s.direction || '').toUpperCase()}</span></td>
                     <td class="px-5 py-3 text-muted text-xs">${s.strategy_type || '—'}</td>
-                    <td class="px-5 py-3 text-right">${(s.entry_price ?? 0).toLocaleString()}</td>
-                    <td class="px-5 py-3 text-right text-loss">${(s.stop_loss ?? 0).toLocaleString()}</td>
+                    <td class="px-5 py-3 text-right">${fmtPrice(s.entry_price)}</td>
+                    <td class="px-5 py-3 text-right text-loss">${fmtPrice(s.stop_loss)}</td>
                     <td class="px-5 py-3 text-right text-win">${(s.take_profit_levels && s.take_profit_levels[0]) ? s.take_profit_levels[0].price.toLocaleString() : '—'}</td>
                     <td class="px-5 py-3 text-right">${(s.confidence_score ?? 0).toFixed(1)}%</td>
                     <td class="px-5 py-3 text-center">${statusBadge(s.status)}</td>
@@ -1736,7 +1766,7 @@ async def admin_panel():
                     <td class="px-5 py-3 font-semibold text-white">${t.symbol}</td>
                     <td class="px-5 py-3 text-muted capitalize text-xs">${t.account_type}</td>
                     <td class="px-5 py-3"><span class="badge ${t.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${(t.direction || '').toUpperCase()}</span></td>
-                    <td class="px-5 py-3 text-right">${(t.entry_price ?? 0).toLocaleString()}</td>
+                    <td class="px-5 py-3 text-right">${fmtPrice(t.entry_price)}</td>
                     <td class="px-5 py-3 text-right">${t.exit_price ? t.exit_price.toLocaleString() : '—'}</td>
                     <td class="px-5 py-3 text-right font-semibold ${(t.pnl_percent ?? 0) >= 0 ? 'text-win' : 'text-loss'}">${t.pnl_percent != null ? (t.pnl_percent >= 0 ? '+' : '') + t.pnl_percent.toFixed(2) + '%' : '—'}</td>
                     <td class="px-5 py-3 text-right">${t.r_multiple != null ? t.r_multiple.toFixed(2) + 'R' : '—'}</td>

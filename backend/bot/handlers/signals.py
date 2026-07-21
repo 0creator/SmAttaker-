@@ -17,6 +17,27 @@ from backend.bot.handlers.menu import register_callback
 from backend.bot.utils.safe_edit import safe_edit_message
 
 
+def _fmt_price(price) -> str:
+    """Adaptive price formatter — small cryptos need many decimals."""
+    if price is None:
+        return "—"
+    try:
+        p = float(price)
+    except (TypeError, ValueError):
+        return str(price)
+    if p == 0:
+        return "$0.00"
+    abs_p = abs(p)
+    if abs_p >= 1000:
+        return f"${p:,.2f}"
+    elif abs_p >= 1:
+        return f"${p:,.4f}"
+    elif abs_p >= 0.01:
+        return f"${p:.6f}"
+    else:
+        return f"${p:.8f}"
+
+
 async def signals_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /signals — show active signals."""
     user = update.effective_user
@@ -97,7 +118,7 @@ async def _send_signal_card(update, context, signal: Signal, db_user: User):
     tp_lines = ""
     if signal.take_profit_levels:
         for tp in signal.take_profit_levels:
-            tp_lines += f"   TP{tp.get('level', '')}: ${tp.get('price', 0):,.2f} (+{tp.get('pct', 0)}%) [{tp.get('size_pct', 100)}%]\n"
+            tp_lines += f"   TP{tp.get('level', '')}: {_fmt_price(tp.get('price', 0))} (+{tp.get('pct', 0)}%) [{tp.get('size_pct', 100)}%]\n"
 
     confidence = signal.confidence_score or 0
     confidence_bar = "█" * int(confidence / 10) + "░" * (10 - int(confidence / 10))
@@ -113,8 +134,8 @@ async def _send_signal_card(update, context, signal: Signal, db_user: User):
         f"{direction_emoji} *{t('NEW SIGNAL', 'إشارة جديدة')}* — {asset_emoji} *{signal.symbol}*\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"*{t('Direction', 'الاتجاه')}:* {direction_text}\n"
-        f"*{t('Entry', 'الدخول')}:* ${signal.entry_price:,.2f}\n"
-        f"*{t('Stop Loss', 'وقف الخسارة')}:* ${signal.stop_loss:,.2f} ({signal.stop_loss_pct:.2f}%)\n\n"
+        f"*{t('Entry', 'الدخول')}:* {_fmt_price(signal.entry_price)}\n"
+        f"*{t('Stop Loss', 'وقف الخسارة')}:* {_fmt_price(signal.stop_loss)} ({signal.stop_loss_pct:.2f}%)\n\n"
         f"*{t('Take Profit', 'جني الأرباح')}:*\n{tp_lines}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🤖 *{t('Strategy', 'الاستراتيجية')}:* {signal.strategy_type.replace('_', ' ').title()}\n"
@@ -198,11 +219,11 @@ async def trade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, pay
                 f"✅ *Trade Opened Successfully!* ({acc_type.upper()})\n\n"
                 f"Symbol: *{signal.symbol}*\n"
                 f"Direction: *{signal.direction.upper()}*\n"
-                f"Entry: *${signal.entry_price:,.2f}*",
+                f"Entry: *{_fmt_price(signal.entry_price)}*",
                 f"✅ *تم فتح الصفقة بنجاح!* ({acc_type.upper()})\n\n"
                 f"الرمز: *{signal.symbol}*\n"
                 f"الاتجاه: *{signal.direction.upper()}*\n"
-                f"الدخول: *${signal.entry_price:,.2f}*"
+                f"الدخول: *{_fmt_price(signal.entry_price)}*"
             ),
             parse_mode="Markdown"
         )
