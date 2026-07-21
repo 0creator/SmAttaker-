@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────
+# SmAttaker Trading System — Python Dependencies
+# ─────────────────────────────────────────────────────────
+
+# Core
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-multipart==0.0.19
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# Redis
+redis==5.2.1
+hiredis==2.4.0
+
+# Telegram Bot
+python-telegram-bot[job-queue]==21.9
+
+# Task Queue
+celery[redis]==5.4.0
+flower==2.0.1
+
+# Exchange Integration
+ccxt==4.4.31
+
+# Payments (Crypto)
+
+# HTTP Client
+httpx==0.28.1
+aiohttp==3.10.11
+
+# Encryption
+cryptography==44.0.0
+
+# Data Processing
+numpy==2.2.1
+pandas==2.2.3
+
+# ML / Strategy Engine Dependencies
+lightgbm==4.5.0
+scikit-learn==1.6.0
+scipy==1.14.1
+joblib==1.4.2
+yfinance==0.2.51
+
+# Scheduling
+apscheduler==3.10.4
+
+# Logging & Monitoring
+structlog==24.4.0
+
+# Utilities
+python-dotenv==1.0.1
+email-validator==2.2.0
+phonenumbers==8.13.52
