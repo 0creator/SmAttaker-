@@ -1,0 +1,44 @@
+{
+  "version": "v43",
+  "symbol": "FIL",
+  "train_end_date": "2025-07-28",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-07T12:33:16.491755Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 36,
+      "cv_auc": 0.48476098603140344,
+      "baseline_wr": 43.78109452736319,
+      "best_wr": 46.15384615384615,
+      "inverted": true
+    }
+  },
+  "n_train_trades": 232,
+  "n_total_bars": 18000,
+  "is_period": {
+    "start": "2024-07-18",
+    "end": "2025-07-28"
+  },
+  "oos_period": {
+    "start": "2025-07-28",
+    "end": "2026-08-07"
+  }
+}

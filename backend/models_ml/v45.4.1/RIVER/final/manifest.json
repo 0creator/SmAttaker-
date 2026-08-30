@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "RIVER",
+  "train_end_date": "2026-03-08",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T21:58:13.388627Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 43,
+      "cv_auc": 0.6413817566048178,
+      "baseline_wr": 51.08958837772397,
+      "best_wr": 55.1219512195122,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 39,
+      "cv_auc": 0.5913402182243992,
+      "baseline_wr": 58.08823529411765,
+      "best_wr": 65.59139784946237,
+      "inverted": false
+    }
+  },
+  "n_train_trades": 549,
+  "n_total_bars": 7940,
+  "is_period": {
+    "start": "2025-09-22",
+    "end": "2026-03-08"
+  },
+  "oos_period": {
+    "start": "2026-03-08",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "RIVER-USD",
+  "asset_class": null
+}

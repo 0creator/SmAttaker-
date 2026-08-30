@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmAttaker — Sign In</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: {
+            fontFamily: { sans: ['Manrope','sans-serif'], display: ['Space Grotesk','sans-serif'] },
+            colors: { void: '#05070D', card: '#10162A', line: '#1E2740', gold: { DEFAULT: '#D4AF37', light: '#F0D683' } }
+        }}}
+    </script>
+    <style>
+        body { background: radial-gradient(1000px 500px at 50% -10%, rgba(212,175,55,0.10), transparent), #05070D; }
+        .gold-text { background: linear-gradient(135deg, #F0D683 0%, #D4AF37 45%, #9C7A1E 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .gold-btn { background: linear-gradient(135deg, #F0D683 0%, #D4AF37 60%, #C9A227 100%); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center font-sans text-slate-200 px-4">
+
+    <div class="w-full max-w-sm">
+        <div class="flex flex-col items-center mb-8">
+            <div class="w-16 h-16 rounded-2xl gold-btn flex items-center justify-center shadow-lg mb-4">
+                <span class="text-void text-2xl font-black">S</span>
+            </div>
+            <h1 class="font-display font-bold text-2xl gold-text">SMATTAKER</h1>
+            <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest">Institutional Trading Access</p>
+        </div>
+
+        <div class="bg-card border border-line rounded-2xl p-8 shadow-2xl text-center">
+            <h2 class="font-bold text-lg text-white mb-1">Sign in with Telegram</h2>
+            <p class="text-sm text-slate-500 mb-6">
+                Your account is verified through Telegram — the same identity your bot already knows.
+                No separate password to create or lose.
+            </p>
+
+            <div id="telegramWidgetContainer" class="flex justify-center mb-4"></div>
+
+            <div id="loadingState" class="hidden items-center justify-center gap-2 text-gold text-sm font-semibold py-3">
+                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                Verifying your Telegram identity...
+            </div>
+
+            <div id="errorState" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-lg p-3 mb-2"></div>
+
+            <label class="flex items-center gap-2 text-xs text-slate-400 mt-4 cursor-pointer select-none">
+                <input type="checkbox" id="rememberMe" checked class="accent-amber-500">
+                Keep me signed in on this device (7 days)
+            </label>
+
+            <p class="text-[11px] text-slate-600 mt-4 leading-relaxed">
+                New here? Signing in for the first time automatically starts your registration —
+                an admin will review and approve your account shortly after.
+            </p>
+        </div>
+
+        <div class="bg-card border border-gold/20 rounded-xl p-4 mt-6 text-center">
+            <p class="text-sm text-slate-300 font-semibold mb-2">🔗 Easiest way to log in</p>
+            <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                If the button above doesn't appear or doesn't work, just
+                send <span class="text-gold font-bold">/login</span> to
+                <span class="text-gold">@{{ bot_username }}</span> on Telegram.
+                You'll get a direct link to your dashboard — no password,
+                no widget, one tap.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ── Session persistence helpers ──
+        // The dashboard JWT is valid for 7 days (see JWT_ACCESS_TOKEN_EXPIRE_MINUTES).
+        // We keep it in localStorage (survives new tabs + browser
+        // restarts) with a recorded timestamp so we can expire it
+        // locally even if the server-side expiry isn't checked yet.
+        // 'Remember me' unchecked => fall back to sessionStorage for
+        // users who explicitly don't want the token persisted to disk.
+        const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+        function _saveSession(token, refreshToken) {
+            const remember = document.getElementById('rememberMe') && document.getElementById('rememberMe').checked;
+            const store = remember ? localStorage : sessionStorage;
+            // Mirror into both so a pre-existing sessionStorage copy
+            // doesn't override the new localStorage one on next load.
+            try { sessionStorage.removeItem('smattaker_user_token'); } catch (e) {}
+            try { sessionStorage.removeItem('smattaker_refresh_token'); } catch (e) {}
+            try { sessionStorage.removeItem('smattaker_session_ts'); } catch (e) {}
+            store.setItem('smattaker_user_token', token);
+            if (refreshToken) store.setItem('smattaker_refresh_token', refreshToken);
+            store.setItem('smattaker_session_ts', Date.now().toString());
+        }
+        function _loadSession() {
+            let token = localStorage.getItem('smattaker_user_token');
+            let ts = localStorage.getItem('smattaker_session_ts');
+            let store = localStorage;
+            if (!token) {
+                token = sessionStorage.getItem('smattaker_user_token');
+                ts = sessionStorage.getItem('smattaker_session_ts');
+                store = sessionStorage;
+            }
+            if (!token) return null;
+            // Expire locally after SESSION_MAX_AGE_MS so we don't keep
+            // a stale token around indefinitely.
+            if (ts && (Date.now() - parseInt(ts, 10)) > SESSION_MAX_AGE_MS) {
+                store.removeItem('smattaker_user_token');
+                store.removeItem('smattaker_refresh_token');
+                store.removeItem('smattaker_session_ts');
+                return null;
+            }
+            return token;
+        }
+        function _clearSession() {
+            [localStorage, sessionStorage].forEach(s => {
+                try { s.removeItem('smattaker_user_token'); } catch (e) {}
+                try { s.removeItem('smattaker_refresh_token'); } catch (e) {}
+                try { s.removeItem('smattaker_session_ts'); } catch (e) {}
+            });
+        }
+
+        // ── Render the OFFICIAL Telegram Login Widget ──────────
+        // This is Telegram's own script; it's the only way a web page can
+        // legitimately prove a visitor controls a given Telegram account.
+        // The widget calls `onTelegramAuth` with a payload signed by
+        // Telegram (hash + auth_date), which our backend verifies with
+        // HMAC-SHA256 against the bot token (see utils/security.py).
+        const script = document.createElement('script');
+        script.src = 'https://telegram.org/js/telegram-widget.js?22';
+        script.setAttribute('data-telegram-login', '{{ bot_username }}');
+        script.setAttribute('data-size', 'large');
+        script.setAttribute('data-radius', '10');
+        script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+        script.setAttribute('data-request-access', 'write');
+        document.getElementById('telegramWidgetContainer').appendChild(script);
+
+        async function onTelegramAuth(user) {
+            document.getElementById('telegramWidgetContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('loadingState').classList.add('flex');
+            document.getElementById('errorState').classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user),
+                });
+                const json = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(json.detail || 'Login failed. Please try again.');
+                }
+
+                // ⚠️ Match the REAL response shape from api/auth.py exactly:
+                // { data: { token, refresh_token, user: { status, ... }, is_new } }
+                const token = json.data && json.data.token;
+                const refreshToken = json.data && json.data.refresh_token;
+                const userStatus = json.data && json.data.user && json.data.user.status;
+
+                if (token && userStatus === 'pending_approval') {
+                    // Store the token anyway (dashboard can still show
+                    // "awaiting approval" state using it), but lead with
+                    // the approval message so it's not mistaken for a bug.
+                    _saveSession(token, refreshToken);
+                    document.getElementById('loadingState').classList.add('hidden');
+                    document.getElementById('errorState').classList.remove('hidden');
+                    document.getElementById('errorState').className = 'bg-gold/10 border border-gold/30 text-gold text-xs rounded-lg p-3 mb-2';
+                    document.getElementById('errorState').textContent =
+                        '✅ Account created! An admin needs to approve it before signals/trading unlock — you\'ll get a Telegram message once approved. Redirecting to your dashboard...';
+                    setTimeout(() => { window.location.href = '/dashboard'; }, 2500);
+                } else if (token) {
+                    _saveSession(token, refreshToken);
+                    window.location.href = '/dashboard';
+                } else {
+                    throw new Error('Unexpected response from server.');
+                }
+            } catch (e) {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('errorState').classList.remove('hidden');
+                document.getElementById('errorState').textContent = e.message;
+                document.getElementById('telegramWidgetContainer').classList.remove('hidden');
+            }
+        }
+
+        // If already logged in, skip straight to the dashboard.
+        // If already logged in (localStorage survives across tabs /
+        // restarts, sessionStorage does not), skip straight to the
+        // dashboard. This is what stops the 'Open Web Dashboard'
+        // button from forcing a re-login every single time.
+        if (_loadSession()) {
+            window.location.href = '/dashboard';
+        }
+    </script>
+</body>
+</html>
+

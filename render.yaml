@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────
+# SmAttaker — Render Deployment Config
+# ─────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: smattaker-backend
+    env: python
+    runtime: python3.12
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    # ⚠️ CRITICAL: --workers 1 is REQUIRED. The Telegram bot polls for
+    # updates via long-polling, and Telegram's getUpdates API returns
+    # 409 Conflict if more than one process polls with the same bot
+    # token at the same time. Running uvicorn with multiple workers
+    # (the default is 1, but explicit is safer than implicit) would
+    # spawn N bot pollers and they'd fight each other forever.
+    # Also: no --reload (that also spawns a second process).
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smattaker-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: smattaker-redis
+          type: redis
+          property: connectionString
+      - key: SECRET_KEY
+        generate: true
+      - key: ENCRYPTION_KEY
+        generate: true
+      - key: INTERNAL_API_KEY
+        generate: true
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: ADMIN_TELEGRAM_ID
+        sync: false
+      - key: TWELVE_DATA_API_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # ── V52: Wallet addresses for crypto payments ──────────────
+      # User's actual wallet addresses. Each network has its own address —
+      # never reuse one across networks (TRC20 and ERC20/BEP20 are
+      # incompatible formats). Validated at runtime by utils/wallets.py.
+      - key: USDT_TRC20_ADDRESS
+        value: TL5wRbCejAFP8Ng8oy14kAiqfyK447ZVRc
+      - key: BTC_BEP20_ADDRESS
+        value: "0xcf30383c5f0cd6aefe480d4a4c3546f900f9bb4a"
+
+  - type: redis
+    name: smattaker-redis
+    ipAllowList: []
+
+databases:
+  - name: smattaker-db
+    databaseName: smattaker
+    user: smattaker
+    plan: free

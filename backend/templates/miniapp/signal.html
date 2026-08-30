@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0e1a">
+    <title>{{ symbol }} · SmAttaker</title>
+
+    <!-- ⚠️ v45.4.5 FIX: TradingView tv.js MUST be loaded BEFORE the
+         inline script that calls `new TradingView.widget(...)`. In
+         v45.4.4 this <script> tag was placed at the END of <body>,
+         AFTER the inline `new TradingView.widget({...})` call — so
+         `TradingView` was `undefined` at construction time and the
+         chart never rendered (the user saw an empty dark-green box).
+         Now: load it in <head>, and wrap the widget constructor in
+         a `script.onload` callback so the chart is built only AFTER
+         the lib is ready. Defensive against future re-ordering. -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-primary: {{ theme_bg_primary }};
+            --bg-secondary: {{ theme_bg_secondary }};
+            --bg-card: {{ theme_bg_card }};
+            --text-primary: {{ theme_text_primary }};
+            --text-secondary: {{ theme_text_secondary }};
+            --accent: {{ theme_accent }};
+            --accent-glow: {{ theme_accent_glow }};
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: {{ theme_border }};
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 12px 14px 100px 14px;
+            overflow-x: hidden;
+            font-feature-settings: 'tnum' 1;
+        }
+
+        /* ─── Header Card ──────────────────────────────────── */
+        .header-card {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+            border-radius: var(--radius);
+            padding: 18px 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-glow), var(--accent));
+            opacity: 0.7;
+        }
+        .dir-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+        .dir-badge.long { background: linear-gradient(135deg, rgba(34,197,94,0.18), rgba(34,197,94,0.06)); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+        .dir-badge.short { background: linear-gradient(135deg, rgba(239,68,68,0.18), rgba(239,68,68,0.06)); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        .symbol-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .symbol {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .asset-tag {
+            font-size: 10px;
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        .strategy-tag {
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.85;
+        }
+
+        /* ─── Chart Section ────────────────────────────────── */
+        .chart-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px 8px 16px;
+        }
+        .chart-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
+        .live-dot { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--success); }
+        .live-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        #tv_chart { width: 100%; height: 360px; background: var(--bg-primary); }
+
+        /* v45.4.5: chart placeholder shown until TradingView script loads
+           and the widget initializes. Replaces the previous "empty box"
+           UX where the chart area was just dark-green for the few seconds
+           before TV loaded. */
+        .chart-placeholder {
+            position: absolute;
+            inset: 38px 0 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .chart-placeholder.hidden { opacity: 0; }
+        .chart-placeholder .spinner {
+            width: 28px; height: 28px;
+            border: 2px solid rgba(255,255,255,0.08);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .chart-error {
+            position: absolute;
+            inset: 38px 0 0 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-align: center;
+            padding: 0 24px;
+        }
+        .chart-error.show { display: flex; }
+
+        /* ─── Trade Setup Card ─────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+        }
+        .card-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .price-row:last-child { border-bottom: none; }
+        .price-label { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+        .price-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .price-pct {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .price-pct.positive { background: rgba(34,197,94,0.15); color: var(--success); }
+        .price-pct.negative { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+        /* ─── AI Confidence Section (the killer visual) ────── */
+        .ai-section {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+            border-radius: var(--radius);
+            padding: 18px 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.6;
+        }
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .ai-icon {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+        }
+        .ai-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        .ai-confidence-display {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .confidence-circle {
+            position: relative;
+            display: inline-block;
+            width: 130px;
+            height: 130px;
+        }
+        .confidence-circle svg { transform: rotate(-90deg); }
+        .confidence-circle .bg-ring { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+        .confidence-circle .fg-ring {
+            fill: none;
+            stroke: url(#conf-grad);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
+            filter: drop-shadow(0 0 6px var(--accent-glow));
+        }
+        .confidence-value {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .confidence-number { font-size: 32px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+        .confidence-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .conviction-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+        .conviction-badge.high { background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(239,68,68,0.2)); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+        .conviction-badge.medium { background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+        .conviction-badge.moderate { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+
+        /* AI breakdown grid */
+        .ai-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .ai-breakdown-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .ai-breakdown-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .ai-breakdown-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* ─── Technicals ───────────────────────────────────── */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .tech-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            text-align: center;
+        }
+        .tech-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .tech-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+        /* ─── Live P&L card ─────────────────────────────────── */
+        .live-pnl {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+            border-radius: var(--radius);
+            padding: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .live-pnl-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .live-pnl-value { font-size: 36px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .live-pnl-value.profit { color: var(--success); text-shadow: 0 0 24px rgba(34,197,94,0.4); }
+        .live-pnl-value.loss { color: var(--danger); text-shadow: 0 0 24px rgba(239,68,68,0.4); }
+        .live-pnl-value.breakeven { color: var(--text-secondary); }
+        .live-pnl-sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+        /* ─── Action Button (sticky bottom) ────────────────── */
+        .actions {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(180deg, transparent, var(--bg-primary) 30%);
+            padding: 16px 14px 24px 14px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+            letter-spacing: 0.3px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+            color: white;
+            box-shadow: 0 4px 20px rgba({{ accent_rgb }},0.4);
+        }
+        .btn-primary.success {
+            background: linear-gradient(135deg, var(--success), #16a34a);
+            box-shadow: 0 4px 20px rgba(34,197,94,0.4);
+        }
+        .btn-primary.error {
+            background: linear-gradient(135deg, var(--danger), #b91c1c);
+            box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            margin-top: 8px;
+        }
+        .btn-subscribe {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            box-shadow: 0 4px 24px rgba(245,158,11,0.4);
+        }
+        /* v45.4.5: spinner shown on Track button while the bot is
+           processing the tg.sendData payload. Pulsing dots. */
+        .dots {
+            display: inline-block;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .dots::after {
+            content: '';
+            display: inline-block;
+            width: 1.5em;
+            text-align: left;
+            animation: dots 1.2s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+
+        /* ─── Teaser state (for non-subscribers) ──────────── */
+        .blur {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+        .teaser-overlay {
+            position: relative;
+            text-align: center;
+            padding: 20px;
+        }
+        .teaser-lock {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        .teaser-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .teaser-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        /* ─── Error states (expired token / signal not found) ── */
+        .error-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 32px 24px;
+            border: 1px solid var(--border);
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .error-icon { font-size: 56px; margin-bottom: 12px; }
+        .error-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .error-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+        /* ─── Footer ───────────────────────────────────────── */
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            margin: 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+{% if error %}
+    <!-- ─── ERROR STATE: invalid/expired token, signal not found, etc. ── -->
+    <div class="error-card">
+        <div class="error-icon">
+            {% if error == "expired_token" %}⏱️
+            {% elif error == "signal_mismatch" %}🚫
+            {% elif error == "not_found" %}📭
+            {% else %}⚠️{% endif %}
+        </div>
+        <div class="error-title">
+            {% if error == "expired_token" %}Link Expired
+            {% elif error == "signal_mismatch" %}Invalid Link
+            {% elif error == "not_found" %}Signal Not Found
+            {% else %}Something Went Wrong{% endif %}
+        </div>
+        <div class="error-text">
+            {% if error == "expired_token" %}This signal link has expired. Open the latest signal from your SmAttaker bot to view a fresh chart.
+            {% elif error == "signal_mismatch" %}This link doesn't match the signal you're trying to view.
+            {% elif error == "not_found" %}This signal is no longer active or has been removed.
+            {% else %}Please close this window and try again from the SmAttaker bot.{% endif %}
+        </div>
+    </div>
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="window.Telegram.WebApp.close()">{{ "🔙 إغلاق" if lang == "ar" else "🔙 Close" }}</button>
+    </div>
+    <div class="footer">SmAttaker</div>
+
+{% elif has_access %}
+    <!-- ─── HEADER CARD ──────────────────────────────────── -->
+    <div class="header-card">
+        <div class="dir-badge {{ direction_lower }}">{{ dir_emoji }} {{ dir_text }} ALERT</div>
+        <div class="symbol-row">
+            <div class="symbol">{{ symbol }}</div>
+            <div class="asset-tag">{{ asset_class_label }}</div>
+        </div>
+        <div class="strategy-tag">⚡ SmAttaker · {{ candle_time }}</div>
+    </div>
+
+    <!-- ─── LIVE P&L (if user is tracking this trade) ────── -->
+    <div class="live-pnl" id="live-pnl-card" style="display: none;">
+        <div class="live-pnl-label">Live P&L · Had you entered</div>
+        <div class="live-pnl-value breakeven" id="live-pnl-value">$0.00</div>
+        <div class="live-pnl-sub" id="live-pnl-sub">Loading current price...</div>
+    </div>
+
+    <!-- ─── TRADINGVIEW CHART ────────────────────────────── -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <div class="chart-title">Live Chart</div>
+            <div class="live-dot">LIVE</div>
+        </div>
+        <div id="tv_chart"></div>
+        <!-- v45.4.5: loading placeholder + error fallback — replaced
+             the previous behavior where the chart area was just an
+             empty dark box for the few seconds before TV loaded (or
+             forever, in v45.4.4 where the script never loaded). -->
+        <div class="chart-placeholder" id="chart-placeholder">
+            <div class="spinner"></div>
+            <div>Loading chart...</div>
+        </div>
+        <div class="chart-error" id="chart-error">
+            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+            <div>Chart unavailable</div>
+            <div style="opacity: 0.6; margin-top: 4px;">TradingView failed to load — check your connection.</div>
+        </div>
+    </div>
+
+    <!-- ─── TRADE SETUP ──────────────────────────────────── -->
+    <div class="card">
+        <div class="card-title">Trade Setup</div>
+        <div class="price-row">
+            <div class="price-label">📥 Entry</div>
+            <div class="price-value">{{ entry_price }}</div>
+        </div>
+        <div class="price-row">
+            <div class="price-label">🛡️ Stop Loss</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="price-value">{{ stop_loss }}</div>
+                <div class="price-pct negative">{{ sl_pct }}</div>
+            </div>
+        </div>
+        {% for tp in take_profit_levels %}
+        <div class="price-row">
+            <div class="price-label">🎯 TP {{ tp.level }}</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="price-value">{{ tp.price }}</div>
+                <div class="price-pct positive">+{{ tp.pct }}%</div>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="price-row">
+            <div class="price-label">⚖️ Risk/Reward</div>
+            <div class="price-value">1 : {{ rr }}</div>
+        </div>
+        <div class="price-row">
+            <div class="price-label">⏰ Time</div>
+            <div class="price-value">{{ candle_time }}</div>
+        </div>
+    </div>
+
+    <!-- ─── AI INSIGHTS ──────────────────────────────────── -->
+    <div class="ai-section">
+        <div class="ai-header">
+            <div class="ai-icon">🧠</div>
+            <div class="ai-title">AI Engine Analysis</div>
+            <div class="conviction-badge {{ conviction_bucket }}">{{ conviction_emoji }} {{ conviction_text }}</div>
+        </div>
+        <div class="ai-confidence-display">
+            <div class="confidence-circle">
+                <svg width="130" height="130" viewBox="0 0 130 130">
+                    <defs>
+                        <linearGradient id="conf-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="{{ accent_hex }}"/>
+                            <stop offset="100%" stop-color="{{ accent_glow_hex }}"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="bg-ring" cx="65" cy="65" r="58"/>
+                    <circle class="fg-ring" id="conf-ring" cx="65" cy="65" r="58"
+                            stroke-dasharray="364.4" stroke-dashoffset="364.4"/>
+                </svg>
+                <div class="confidence-value">
+                    <div class="confidence-number" id="conf-number">0</div>
+                    <div class="confidence-label">Confidence</div>
+                </div>
+            </div>
+        </div>
+        <div class="ai-breakdown">
+            <div class="ai-breakdown-item">
+                <div class="ai-breakdown-label">Asset Class</div>
+                <div class="ai-breakdown-value">{{ asset_class_label }}</div>
+            </div>
+            <div class="ai-breakdown-item">
+                <div class="ai-breakdown-label">Strategy</div>
+                <div class="ai-breakdown-value">SmAttaker</div>
+            </div>
+            {% if conviction_meta %}
+            <div class="ai-breakdown-item">
+                <div class="ai-breakdown-label">Conviction</div>
+                <div class="ai-breakdown-value">{{ conviction_meta }}</div>
+            </div>
+            {% endif %}
+            <div class="ai-breakdown-item">
+                <div class="ai-breakdown-label">Direction</div>
+                <div class="ai-breakdown-value">{{ dir_text }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── TECHNICALS (if available) ───────────────────── -->
+    {% if technicals %}
+    <div class="card">
+        <div class="card-title">Technical Snapshot</div>
+        <div class="tech-grid">
+            {% for label, value in technicals.items() %}
+            <div class="tech-item">
+                <div class="tech-label">{{ label }}</div>
+                <div class="tech-value">{{ value }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="footer">SmAttaker</div>
+
+    <!-- ─── ACTIONS ──────────────────────────────────────── -->
+    <div class="actions">
+        <button class="btn btn-primary" id="track-btn">📥 Track This Trade</button>
+        <button class="btn btn-secondary" id="refresh-btn">🔄 Refresh Live P&L</button>
+    </div>
+
+{% else %}
+    <!-- ─── NON-SUBSCRIBER: blurred preview + subscribe CTA ── -->
+    <div class="header-card">
+        <div class="dir-badge {{ direction_lower }}">{{ dir_emoji }} {{ dir_text }} ALERT</div>
+        <div class="symbol-row">
+            <div class="symbol">{{ symbol }}</div>
+            <div class="asset-tag">{{ asset_class_label }}</div>
+        </div>
+        <div class="strategy-tag">⚡ SmAttaker · {{ candle_time }}</div>
+    </div>
+
+    <div class="chart-section blur">
+        <div class="chart-header">
+            <div class="chart-title">Live Chart</div>
+            <div class="live-dot">LIVE</div>
+        </div>
+        <div id="tv_chart" style="height: 360px;"></div>
+    </div>
+
+    <div class="card blur">
+        <div class="card-title">Trade Setup</div>
+        <div class="price-row"><div class="price-label">📥 Entry</div><div class="price-value">$XXX.XX</div></div>
+        <div class="price-row"><div class="price-label">🛡️ Stop Loss</div><div class="price-value">$XXX.XX</div></div>
+        <div class="price-row"><div class="price-label">🎯 TP 1</div><div class="price-value">$XXX.XX</div></div>
+    </div>
+
+    <div class="ai-section">
+        <div class="ai-header">
+            <div class="ai-icon">🧠</div>
+            <div class="ai-title">AI Engine Analysis</div>
+        </div>
+        <div class="ai-confidence-display">
+            <div class="confidence-circle">
+                <svg width="130" height="130" viewBox="0 0 130 130">
+                    <defs>
+                        <linearGradient id="conf-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="{{ accent_hex }}"/>
+                            <stop offset="100%" stop-color="{{ accent_glow_hex }}"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="bg-ring" cx="65" cy="65" r="58"/>
+                    <circle class="fg-ring" id="conf-ring" cx="65" cy="65" r="58"
+                            stroke-dasharray="364.4" stroke-dashoffset="364.4"/>
+                </svg>
+                <div class="confidence-value">
+                    <div class="confidence-number" id="conf-number">{{ confidence_display }}</div>
+                    <div class="confidence-label">{{ conviction_emoji }} {{ conviction_text }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="teaser-overlay">
+        <div class="teaser-lock">🔒</div>
+        <div class="teaser-title">Unlock This Signal</div>
+        <div class="teaser-text">
+            Subscribe to see entry price, stop loss, take profit levels,
+            real-time P&amp;L tracking, and full AI breakdown for every signal.
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-subscribe" id="subscribe-btn">💎 Subscribe Now · $49/mo</button>
+        <a href="{{ subscribe_url }}" class="btn btn-secondary">🔗 Open Dashboard</a>
+    </div>
+
+    <div class="footer">SmAttaker</div>
+{% endif %}
+
+<script>
+    // ─── Initialize Telegram WebApp ─────────────────────
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) {
+        tg.ready();
+        tg.expand();
+        if (tg.themeParams && tg.themeParams.bg_color) {
+            document.body.style.background = tg.themeParams.bg_color;
+        }
+        // Tell Telegram which button the Mini App's main button should
+        // show — Telegram's "MainButton" appears at the bottom of the
+        // WebApp container (separate from our custom-styled buttons)
+        // and is the conventional UX on Telegram for the primary call
+        // to action. We hide it because we render our own action bar
+        // with the Track / Refresh / Subscribe buttons — a custom UI
+        // gives us full control over styling, loading states, and
+        // success/error feedback. Hiding the MainButton avoids
+        // confusing the user with two primary CTAs.
+        if (tg.MainButton && tg.MainButton.hide) {
+            tg.MainButton.hide();
+        }
+    }
+
+    // ─── Confidence Ring Animation ───────────────────────
+    const targetConfidence = {{ confidence_num }};
+    const circumference = 364.4; // 2 * π * 58
+    const ring = document.getElementById('conf-ring');
+    const confNumber = document.getElementById('conf-number');
+    if (ring && confNumber) {
+        const offset = circumference - (targetConfidence / 100) * circumference;
+        setTimeout(() => {
+            ring.style.strokeDashoffset = offset;
+            // Animate the number counting up
+            let current = 0;
+            const step = targetConfidence / 60;
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= targetConfidence) {
+                    current = targetConfidence;
+                    clearInterval(timer);
+                }
+                confNumber.textContent = current.toFixed(1);
+            }, 16);
+        }, 200);
+    }
+
+    // ─── TradingView Widget (v45.4.5 fix) ────────────────
+    // Previous bug: this code ran BEFORE tv.js was loaded (the
+    // <script> tag was at the END of <body>), so `TradingView` was
+    // `undefined` and the chart never rendered. Now tv.js loads in
+    // <head>, but we STILL wrap the constructor in a defensive
+    // `waitForTradingView()` retry loop — covers the case where the
+    // CDN is slow or the script was blocked by an aggressive ad
+    // blocker. Falls back to a clear "chart unavailable" message
+    // instead of an empty box.
+    const tvSymbol = "{{ tv_symbol }}";
+    const tvLocale = "{{ tv_locale }}";
+    const placeholder = document.getElementById('chart-placeholder');
+    const chartError = document.getElementById('chart-error');
+
+    function hidePlaceholder() {
+        if (placeholder) placeholder.classList.add('hidden');
+    }
+    function showChartError(msg) {
+        if (placeholder) placeholder.classList.add('hidden');
+        if (chartError) {
+            chartError.classList.add('show');
+            if (msg && chartError.querySelector('div:last-child')) {
+                chartError.querySelector('div:last-child').textContent = msg;
+            }
+        }
+    }
+
+    function initTradingView() {
+        if (typeof TradingView === 'undefined') {
+            // Wait up to 5s for the script to load
+            let attempts = 0;
+            const wait = setInterval(() => {
+                attempts++;
+                if (typeof TradingView !== 'undefined') {
+                    clearInterval(wait);
+                    buildChart();
+                } else if (attempts > 25) {
+                    clearInterval(wait);
+                    showChartError('TradingView library failed to load');
+                }
+            }, 200);
+        } else {
+            buildChart();
+        }
+    }
+
+    function buildChart() {
+        try {
+            new TradingView.widget({
+                "container_id": "tv_chart",
+                "autosize": true,
+                "symbol": tvSymbol,
+                "interval": "60",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": tvLocale,
+                "toolbar_bg": "#0a0e1a",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "allow_symbol_change": false,
+                "hide_top_toolbar": false,
+                "save_image": false,
+                "details": false,
+                "studies": [
+                    "RSI@tv:basic",
+                    "MAExp@tv:basic"
+                ],
+                "support_zoom": true,
+            });
+            // Hide the placeholder once the widget starts building.
+            // TradingView doesn't expose a `ready` callback on the
+            // widget constructor, so we delay by 600ms — empirically
+            // the time it takes for the first paint on a fast
+            // connection. On a slow connection the user briefly sees
+            // the spinner overlaid on the chart background, which is
+            // fine and far better than an empty box.
+            setTimeout(hidePlaceholder, 600);
+        } catch (e) {
+            showChartError('Chart error: ' + (e.message || 'unknown'));
+        }
+    }
+
+    initTradingView();
+
+    // ─── Live P&L (if user has access) ───────────────────
+    const hasAccess = {{ has_access_json }};
+    const entryPrice = {{ entry_num }};
+    const direction = "{{ direction_lower }}";
+    const signalId = "{{ signal_id }}";
+
+    async function fetchLivePrice() {
+        try {
+            // v45.4.5: pass the auth token via query string, same as
+            // the page itself. The endpoint verifies the HMAC
+            // signature server-side before returning the price, so
+            // no unauthorized user can pull live prices through
+            // this route.
+            const token = new URLSearchParams(window.location.search).get('t') || '';
+            const resp = await fetch(`/api/miniapp/price/${signalId}?t=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            return data.price;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function updateLivePnL() {
+        if (!hasAccess) return;
+        const pnlCard = document.getElementById('live-pnl-card');
+        const pnlValue = document.getElementById('live-pnl-value');
+        const pnlSub = document.getElementById('live-pnl-sub');
+        if (!pnlCard || !pnlValue || !pnlSub) return;
+
+        pnlCard.style.display = 'block';
+        const current = await fetchLivePrice();
+        if (!current) {
+            pnlSub.textContent = 'Could not fetch live price';
+            return;
+        }
+
+        // P&L % based on entry vs current
+        let pct;
+        if (direction === 'long') {
+            pct = ((current - entryPrice) / entryPrice) * 100;
+        } else {
+            pct = ((entryPrice - current) / entryPrice) * 100;
+        }
+        const usd = (pct / 100) * 100; // $100 position
+
+        pnlValue.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ($${usd >= 0 ? '+' : ''}${usd.toFixed(2)})`;
+        pnlValue.className = 'live-pnl-value ' + (pct > 0.01 ? 'profit' : (pct < -0.01 ? 'loss' : 'breakeven'));
+        pnlSub.textContent = `Current: $${current.toFixed(current < 1 ? 6 : (current < 100 ? 4 : 2))}`;
+    }
+
+    if (hasAccess) {
+        updateLivePnL();
+        setInterval(updateLivePnL, 15000); // refresh every 15s
+    }
+
+    // ─── Track Trade button (v45.4.5 fix) ──────────────────
+    // v45.4.4 bug: the click handler called tg.sendData() but the bot
+    // handler didn't actually create a trade — it just replied "go
+    // tap the button on the original message". The Mini App closed
+    // immediately (Telegram's behavior with sendData) and the user
+    // was left with a useless text reply.
+    //
+    // v45.4.5 fix:
+    //   1. Show a loading state on the button so the user sees the
+    //      click registered.
+    //   2. Call tg.sendData() — which now triggers the bot handler
+    //      that ACTUALLY creates the trade (via create_trade_from_signal).
+    //   3. Telegram closes the Mini App right after sendData(); the
+    //      user sees the bot's reply in the chat with full trade
+    //      confirmation (entry, size, "I'll notify you when SL/TP
+    //      is hit or after 8 hours").
+    //   4. If Telegram isn't available (e.g. testing outside the
+    //      WebApp container), fall back to opening the trade via
+    //      the inline button path on the original signal message.
+    const trackBtn = document.getElementById('track-btn');
+    if (trackBtn) {
+        const originalLabel = trackBtn.textContent;
+        trackBtn.addEventListener('click', () => {
+            // Loading state — disable + show dots
+            trackBtn.disabled = true;
+            trackBtn.textContent = '⏳ Opening trade';
+            trackBtn.classList.add('loading');
+            // Re-append the dots span (CSS animation handles the
+            // "..." animation itself).
+            const dots = document.createElement('span', );
+            dots.className = 'dots';
+            trackBtn.appendChild(dots);
+
+            try {
+                const payload = {
+                    action: 'track_trade',
+                    signal_id: signalId,
+                    acc_type: 'auto',
+                };
+                if (tg && tg.sendData) {
+                    // tg.sendData always closes the Mini App after
+                    // sending. The bot's handle_webapp_data handler
+                    // receives the payload, calls create_trade_from_signal,
+                    // and replies in the chat with the trade confirmation.
+                    const ok = tg.sendData(JSON.stringify(payload));
+                    if (!ok) {
+                        // tg.sendData returns false if the WebApp isn't
+                        // properly attached to a bot (e.g. opened via
+                        // direct URL outside Telegram). Fall back to
+                        // telling the user to use the inline button.
+                        trackBtn.textContent = 'ℹ️ Use Track button on the original signal message';
+                        trackBtn.classList.remove('loading');
+                        trackBtn.classList.add('error');
+                        setTimeout(() => {
+                            trackBtn.disabled = false;
+                            trackBtn.textContent = originalLabel;
+                            trackBtn.classList.remove('error');
+                        }, 3500);
+                    }
+                    // If ok, Telegram will close this Mini App in <100ms;
+                    // the button state change is irrelevant but harmless.
+                } else {
+                    // Outside Telegram — fall back to opening the dashboard
+                    trackBtn.textContent = 'ℹ️ Open from SmAttaker bot';
+                    trackBtn.classList.remove('loading');
+                    trackBtn.classList.add('error');
+                    setTimeout(() => {
+                        trackBtn.disabled = false;
+                        trackBtn.textContent = originalLabel;
+                        trackBtn.classList.remove('error');
+                    }, 3500);
+                }
+            } catch (e) {
+                trackBtn.textContent = '❌ Error — try again';
+                trackBtn.classList.remove('loading');
+                trackBtn.classList.add('error');
+                setTimeout(() => {
+                    trackBtn.disabled = false;
+                    trackBtn.textContent = originalLabel;
+                    trackBtn.classList.remove('error');
+                }, 2500);
+            }
+        });
+    }
+
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        const originalLabel = refreshBtn.textContent;
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Refreshing';
+            await updateLivePnL();
+            setTimeout(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = originalLabel;
+            }, 600);
+        });
+    }
+
+    const subscribeBtn = document.getElementById('subscribe-btn');
+    if (subscribeBtn) {
+        subscribeBtn.addEventListener('click', () => {
+            // Send the subscribe intent to the bot — same flow as
+            // track_trade. The bot's handle_webapp_data routes
+            // "subscribe" to the subscribe_command handler.
+            if (tg && tg.sendData) {
+                try {
+                    const ok = tg.sendData(JSON.stringify({ action: 'subscribe' }));
+                    if (!ok) {
+                        // Fall back: open the subscribe URL in a new tab
+                        window.open('{{ subscribe_url }}', '_blank');
+                    }
+                } catch (e) {
+                    window.open('{{ subscribe_url }}', '_blank');
+                }
+            } else {
+                window.open('{{ subscribe_url }}', '_blank');
+            }
+        });
+    }
+
+    // ─── Theme update on Telegram theme change ───────────
+    if (tg && tg.onEvent) {
+        tg.onEvent('themeChanged', () => {
+            if (tg.themeParams && tg.themeParams.bg_color) {
+                document.body.style.background = tg.themeParams.bg_color;
+            }
+        });
+    }
+</script>
+</body>
+</html>

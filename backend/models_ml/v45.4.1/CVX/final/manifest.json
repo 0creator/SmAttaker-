@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "CVX",
+  "train_end_date": "2025-03-11",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T22:44:04.643491Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 44,
+      "cv_auc": 0.6567713292213436,
+      "baseline_wr": 40.106951871657756,
+      "best_wr": 46.728971962616825,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 40,
+      "cv_auc": 0.4892991688446234,
+      "baseline_wr": 48.484848484848484,
+      "best_wr": 50.79365079365079,
+      "inverted": true
+    }
+  },
+  "n_train_trades": 253,
+  "n_total_bars": 5080,
+  "is_period": {
+    "start": "2023-09-26",
+    "end": "2025-03-11"
+  },
+  "oos_period": {
+    "start": "2025-03-11",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "CVX",
+  "asset_class": "stock"
+}

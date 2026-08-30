@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmAttaker — My Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: {
+            fontFamily: { sans: ['Manrope','sans-serif'], display: ['Space Grotesk','sans-serif'] },
+            colors: { void: '#05070D', panel: '#0B0F1A', card: '#10162A', line: '#1E2740',
+                gold: { DEFAULT: '#D4AF37', light: '#F0D683' }, win: '#22C55E', loss: '#EF4444', warn: '#F59E0B', muted: '#8B93A8' }
+        }}}
+    </script>
+    <style>
+        body { background: radial-gradient(1200px 600px at 15% -10%, rgba(212,175,55,0.08), transparent), #05070D; }
+        .gold-text { background: linear-gradient(135deg, #F0D683 0%, #D4AF37 45%, #9C7A1E 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .gold-btn { background: linear-gradient(135deg, #F0D683 0%, #D4AF37 60%, #C9A227 100%); }
+        .tab-panel { display: none; } .tab-panel.active { display: block; }
+        .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        input, select { background: #0B0F1A; }
+        /* Hide scrollbar on nav tabs but keep scroll behavior —
+           prevents the clipped last-tab look on mobile while still
+           letting users swipe through all 8 tabs. */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* Mobile-friendly tap targets */
+        @media (max-width: 640px) {
+            .nav-tab { padding-left: 14px; padding-right: 14px; font-size: 13px; }
+            main { padding: 16px !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-200 font-sans min-h-screen">
+
+<div id="approvalBanner" class="hidden bg-warn/10 border-b border-warn/30 text-warn text-sm text-center py-2 px-4"></div>
+
+<header class="border-b border-line px-6 py-4 flex items-center justify-between sticky top-0 bg-void/90 backdrop-blur z-20">
+    <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl gold-btn flex items-center justify-center"><span class="text-void font-black">S</span></div>
+        <span class="font-display font-bold gold-text">SMATTAKER</span>
+    </div>
+    <div class="flex items-center gap-4">
+        <span id="userGreeting" class="text-sm text-slate-400 hidden sm:block"></span>
+        <button onclick="logout()" class="text-xs text-muted hover:text-loss transition"><i class="fa-solid fa-right-from-bracket mr-1"></i>Sign out</button>
+    </div>
+</header>
+
+<nav class="flex gap-1 px-3 sm:px-6 pt-4 overflow-x-auto border-b border-line no-scrollbar" id="navTabs" style="-webkit-overflow-scrolling: touch;">
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-gold border-b-2 border-gold" data-tab="overview">Overview</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="live">🔴 Live</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="signals">Signals</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="status">Trade Status</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="trades">My Trades</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="analytics">Analysis</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="profile">Profile</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="exchanges">Platforms</button>
+    <button class="nav-tab flex-shrink-0 whitespace-nowrap px-4 py-2.5 rounded-t-lg text-sm font-semibold text-slate-400 border-b-2 border-transparent" data-tab="risk">Risk</button>
+</nav>
+
+<main class="p-6 max-w-5xl mx-auto space-y-6">
+
+    <!-- OVERVIEW -->
+    <section id="tab-overview" class="tab-panel active space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-card border border-line rounded-2xl p-5 md:col-span-2">
+                <h3 class="font-bold text-white mb-3">Subscription Status</h3>
+                <div id="subscriptionBlock" class="text-sm text-muted">Loading...</div>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <h3 class="font-bold text-white mb-3">Account</h3>
+                <div id="accountBlock" class="text-sm space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Getting Started checklist — gives the user a clear sense of
+             what to do next so the dashboard never feels "empty" even
+             when they have zero signals, zero trades, and no subscription.
+             Each step links directly to the tab where the user can complete it. -->
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-3"><i class="fa-solid fa-rocket text-gold mr-2"></i>Getting Started</h3>
+            <div id="gettingStartedList" class="space-y-2 text-sm">
+                <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                    <div class="flex items-center gap-3">
+                        <span id="gsStep1Icon" class="w-6 h-6 rounded-full bg-slate-600/30 flex items-center justify-center text-xs">1</span>
+                        <span>Choose your trading account type</span>
+                    </div>
+                    <button onclick="switchTab('profile')" class="text-xs text-gold hover:underline">Set up →</button>
+                </div>
+                <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                    <div class="flex items-center gap-3">
+                        <span id="gsStep2Icon" class="w-6 h-6 rounded-full bg-slate-600/30 flex items-center justify-center text-xs">2</span>
+                        <span>Connect a trading platform (exchange or MT5)</span>
+                    </div>
+                    <button onclick="switchTab('exchanges')" class="text-xs text-gold hover:underline">Connect →</button>
+                </div>
+                <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                    <div class="flex items-center gap-3">
+                        <span id="gsStep3Icon" class="w-6 h-6 rounded-full bg-slate-600/30 flex items-center justify-center text-xs">3</span>
+                        <span>Configure your risk settings</span>
+                    </div>
+                    <button onclick="switchTab('risk')" class="text-xs text-gold hover:underline">Configure →</button>
+                </div>
+                <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                    <div class="flex items-center gap-3">
+                        <span id="gsStep4Icon" class="w-6 h-6 rounded-full bg-slate-600/30 flex items-center justify-center text-xs">4</span>
+                        <span>Track your first signal and start trading</span>
+                    </div>
+                    <button onclick="switchTab('signals')" class="text-xs text-gold hover:underline">Browse signals →</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-3">Quick Links</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <button onclick="switchTab('signals')" class="bg-void/50 hover:bg-void border border-line rounded-xl p-4 text-left transition"><i class="fa-solid fa-bolt text-gold mb-2 block"></i>View Signals</button>
+                <button onclick="switchTab('status')" class="bg-void/50 hover:bg-void border border-line rounded-xl p-4 text-left transition"><i class="fa-solid fa-chart-line text-gold mb-2 block"></i>Trade Status</button>
+                <button onclick="switchTab('analytics')" class="bg-void/50 hover:bg-void border border-line rounded-xl p-4 text-left transition"><i class="fa-solid fa-chart-pie text-gold mb-2 block"></i>Analysis</button>
+                <button onclick="switchTab('profile')" class="bg-void/50 hover:bg-void border border-line rounded-xl p-4 text-left transition"><i class="fa-solid fa-user text-gold mb-2 block"></i>My Profile</button>
+            </div>
+        </div>
+        <!-- Active Trades Snapshot on Overview -->
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-white">Active Trades</h3>
+                <button onclick="switchTab('status')" class="text-xs text-gold hover:underline">View all →</button>
+            </div>
+            <div id="overviewActiveTrades" class="space-y-2"></div>
+        </div>
+    </section>
+
+    <!-- LIVE PORTFOLIO -->
+    <section id="tab-live" class="tab-panel space-y-5">
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-1">
+                <div class="flex items-center gap-2">
+                    <span id="liveDot" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                    <h3 class="font-bold text-white">Live Portfolio</h3>
+                </div>
+                <select id="liveAccountType" class="bg-void border border-line rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-gold">
+                    <option value="paper">Paper</option>
+                    <option value="demo">Demo</option>
+                    <option value="real">Real</option>
+                </select>
+            </div>
+            <p id="liveStatusText" class="text-xs text-muted">Connecting…</p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-card border border-line rounded-2xl p-4">
+                <p class="text-[11px] text-muted mb-1">Open Positions</p>
+                <p id="liveOpenCount" class="text-xl font-bold text-white">—</p>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-4">
+                <p class="text-[11px] text-muted mb-1">Unrealized P&L</p>
+                <p id="liveUnrealized" class="text-xl font-bold text-muted">—</p>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-4">
+                <p class="text-[11px] text-muted mb-1">Balance</p>
+                <p id="liveBalance" class="text-xl font-bold text-white">—</p>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-4">
+                <p class="text-[11px] text-muted mb-1">Live Equity</p>
+                <p id="liveEquity" class="text-xl font-bold text-gold">—</p>
+            </div>
+        </div>
+
+        <div class="bg-card border border-line rounded-2xl overflow-hidden">
+            <div class="px-5 py-3 border-b border-line">
+                <h4 class="text-sm font-bold text-white">Open Positions — updating every few seconds</h4>
+            </div>
+            <div id="livePositionsList" class="divide-y divide-line">
+                <div class="text-center text-muted py-10 text-sm">No open positions.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SIGNALS -->
+    <section id="tab-signals" class="tab-panel space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="text-xs text-muted">Auto-refreshing every 60s <span id="signalsUpdated" class="text-slate-500"></span></div>
+        </div>
+        <div id="signalsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- TRADE STATUS (live open positions + recent outcomes) -->
+    <section id="tab-status" class="tab-panel space-y-5">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="statusKpis"></div>
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-white">Open Positions</h3>
+                <span class="text-xs text-muted">Auto-refreshing every 30s</span>
+            </div>
+            <div id="openPositionsList" class="space-y-2"></div>
+        </div>
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-3">Recent Outcomes (last 24h)</h3>
+            <div id="recentOutcomesList" class="space-y-2"></div>
+        </div>
+    </section>
+
+    <!-- TRADES (journal) -->
+    <section id="tab-trades" class="tab-panel">
+        <div class="bg-card border border-line rounded-2xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-void/60 text-muted text-xs uppercase"><tr>
+                    <th class="text-left px-4 py-3">Symbol</th><th class="text-left px-4 py-3">Direction</th>
+                    <th class="text-left px-4 py-3">Account</th>
+                    <th class="text-right px-4 py-3">Entry</th><th class="text-right px-4 py-3">Exit</th>
+                    <th class="text-right px-4 py-3">P&L%</th><th class="text-right px-4 py-3">R</th>
+                    <th class="text-center px-4 py-3">Status</th>
+                </tr></thead>
+                <tbody id="myTradesBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ANALYSIS -->
+    <section id="tab-analytics" class="tab-panel space-y-5">
+        <!-- KPI cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="analyticsKpis"></div>
+
+        <!-- Equity curve + drawdown -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 bg-card border border-line rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="font-bold text-white">Equity Curve</h3>
+                        <p class="text-xs text-muted">Cumulative R-multiple across all completed trades</p>
+                    </div>
+                    <i class="fa-solid fa-chart-area text-gold"></i>
+                </div>
+                <div class="h-72"><canvas id="equityChart"></canvas></div>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-white">Win / Loss</h3>
+                    <i class="fa-solid fa-scale-balanced text-gold"></i>
+                </div>
+                <div class="h-72"><canvas id="winLossChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Monthly performance + drawdown -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="font-bold text-white">Monthly R-Performance</h3>
+                        <p class="text-xs text-muted">Total R-multiple per month — green = profitable, red = losing</p>
+                    </div>
+                    <i class="fa-solid fa-calendar-days text-gold"></i>
+                </div>
+                <div class="h-64"><canvas id="monthlyChart"></canvas></div>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="font-bold text-white">Drawdown Curve</h3>
+                        <p class="text-xs text-muted">Peak-to-trough decline from equity highs</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-trend-down text-loss"></i>
+                </div>
+                <div class="h-64"><canvas id="drawdownChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Per-asset breakdown + top symbols -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <h3 class="font-bold text-white mb-3">Performance by Asset Class</h3>
+                <div id="winRateByClass" class="space-y-2"></div>
+            </div>
+            <div class="bg-card border border-line rounded-2xl p-5">
+                <h3 class="font-bold text-white mb-3">Top Performing Symbols</h3>
+                <div id="topSymbols" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- R-distribution histogram -->
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="font-bold text-white">R-Multiple Distribution</h3>
+                    <p class="text-xs text-muted">How often each R-multiple bucket occurs — reveals the strategy's risk profile</p>
+                </div>
+                <i class="fa-solid fa-chart-column text-gold"></i>
+            </div>
+            <div class="h-64"><canvas id="rDistributionChart"></canvas></div>
+        </div>
+
+        <!-- Recent signal outcomes -->
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-3">Recent Signal Outcomes</h3>
+            <div id="signalOutcomesList" class="space-y-2"></div>
+        </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="tab-profile" class="tab-panel space-y-5">
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-4">My Profile</h3>
+            <div id="profileDetails" class="space-y-3 text-sm"></div>
+        </div>
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-4">Account Type</h3>
+            <div id="accountTypeBlock" class="space-y-3"></div>
+        </div>
+    </section>
+
+    <!-- EXCHANGES / PLATFORMS -->
+    <section id="tab-exchanges" class="tab-panel space-y-5">
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-2">Connect a Trading Platform</h3>
+            <p class="text-xs text-muted mb-4">Choose your platform type: Crypto Exchange (MEXC, KuCoin, etc.), or MetaTrader 5 (MT5) for forex/CFD trading.</p>
+            <form id="exchangeForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2">
+                    <label class="text-xs text-muted block mb-1">Platform Type</label>
+                    <select id="exPlatformType" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                        <option value="exchange">Crypto Exchange (MEXC, KuCoin, Bybit, OKX, Binance, etc.)</option>
+                        <option value="mt5">MetaTrader 5 (MT5) — Forex/CFD</option>
+                    </select>
+                </div>
+                <select id="exExchange" required class="border border-line rounded-lg px-3 py-2.5 text-sm">
+                    <option value="">Select exchange...</option>
+                    <option value="mexc">MEXC (recommended)</option>
+                    <option value="kucoin">KuCoin (recommended)</option>
+                    <option value="bybit">Bybit</option>
+                    <option value="okx">OKX</option>
+                    <option value="binance">Binance</option>
+                    <option value="kraken">Kraken</option>
+                    <option value="bitget">Bitget</option>
+                </select>
+                <input id="exLabel" placeholder="Label (e.g. My Main Account)" class="border border-line rounded-lg px-3 py-2.5 text-sm">
+                <input id="exApiKey" required placeholder="API Key / MT5 Login" class="border border-line rounded-lg px-3 py-2.5 text-sm md:col-span-2">
+                <input id="exSecretKey" required type="password" placeholder="Secret Key / MT5 Password" class="border border-line rounded-lg px-3 py-2.5 text-sm md:col-span-2">
+                <input id="exPassphrase" type="password" placeholder="Passphrase (OKX only) / MT5 Server (e.g. ICMarketsSC-Demo02)" class="border border-line rounded-lg px-3 py-2.5 text-sm md:col-span-2">
+                <!-- v54: MT5 now auto-connects from login/password/server alone —
+                     the platform provisions the live bridge for you automatically.
+                     The MetaApi fields below are an ADVANCED override only. -->
+                <div id="mt5AutoConnectNote" class="md:col-span-2 hidden bg-gold/10 border border-gold/20 rounded-lg p-4">
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-bolt text-gold text-sm mt-0.5"></i>
+                        <p class="text-xs text-muted leading-relaxed">
+                            <strong class="text-gold">Nothing to install.</strong> Enter your MT5 login, password, and broker server above (exactly as they appear in your MT5 terminal) — the platform connects live order execution automatically. No app, no separate signup.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('mt5MetaApiSection').classList.toggle('hidden')" class="md:col-span-2 hidden text-xs text-muted underline text-left" id="mt5AdvancedToggle">
+                    Advanced: use my own MetaApi Cloud account instead
+                </button>
+                <div id="mt5MetaApiSection" class="md:col-span-2 hidden bg-void/40 border border-line rounded-lg p-4 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-cloud text-gold text-sm"></i>
+                        <h4 class="text-sm font-semibold text-gold">Advanced: Your Own MetaApi Cloud Account</h4>
+                    </div>
+                    <p class="text-xs text-muted leading-relaxed">
+                        Only needed if you already run your own
+                        <a href="https://metaapi.cloud" target="_blank" class="text-gold underline">MetaApi Cloud</a>
+                        account and want to use it instead of the platform's automatic bridge. Leave blank otherwise.
+                    </p>
+                    <input id="exMetaapiAccountId" placeholder="MetaApi Account ID (UUID, e.g. abc12345-...)" class="border border-line rounded-lg px-3 py-2.5 text-sm md:col-span-2">
+                    <input id="exMetaapiApiToken" type="password" placeholder="MetaApi API Token (JWT)" class="border border-line rounded-lg px-3 py-2.5 text-sm md:col-span-2">
+                </div>
+                <label class="flex items-center gap-2 text-sm text-muted md:col-span-2"><input type="checkbox" id="exTestnet"> Use testnet/sandbox (Demo mode)</label>
+                <button type="submit" class="gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg md:col-span-2">Connect Platform</button>
+            </form>
+            <p class="text-xs text-muted mt-3"><i class="fa-solid fa-lock mr-1"></i>Credentials are encrypted at rest and never displayed again after saving.</p>
+        </div>
+        <div id="exchangesList" class="space-y-3"></div>
+    </section>
+
+    <!-- RISK SETTINGS -->
+    <section id="tab-risk" class="tab-panel space-y-5">
+        <div class="bg-card border border-line rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-4">Risk Configuration</h3>
+            <form id="riskForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-muted block mb-1">Account Type</label>
+                    <select id="riskAccountType" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                        <option value="paper">Paper (Virtual $10,000)</option>
+                        <option value="demo">Demo</option>
+                        <option value="real">Real</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-muted block mb-1">Position Sizing Method</label>
+                    <select id="riskSizingMethod" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                        <option value="risk_based">Risk-% Based (recommended)</option>
+                        <option value="fixed">Fixed USD Amount</option>
+                        <option value="fractional">Fractional</option>
+                        <option value="kelly">Kelly Criterion</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-muted block mb-1">Max Risk per Trade (%)</label>
+                    <input id="riskMaxPerTrade" type="number" step="0.1" min="0.1" max="10" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-muted block mb-1">Fixed Position Size (USD)</label>
+                    <input id="riskFixedSize" type="number" step="1" min="1" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-muted block mb-1">Max Leverage</label>
+                    <input id="riskMaxLeverage" type="number" step="1" min="1" max="125" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-muted block mb-1">Max Open Positions</label>
+                    <input id="riskMaxOpen" type="number" step="1" min="1" max="50" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <button type="submit" class="gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg md:col-span-2">Save Risk Settings</button>
+            </form>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden"></div>
+
+<script>
+    // Read from localStorage first (persists across tabs / restarts),
+    // fall back to sessionStorage for users who opted out of
+    // 'Remember me'. Local expiry is enforced inside _loadSession.
+    let TOKEN = null;
+    function _loadSession() {
+        let token = localStorage.getItem('smattaker_user_token');
+        let ts = localStorage.getItem('smattaker_session_ts');
+        let store = localStorage;
+        if (!token) {
+            token = sessionStorage.getItem('smattaker_user_token');
+            ts = sessionStorage.getItem('smattaker_session_ts');
+            store = sessionStorage;
+        }
+        if (!token) return null;
+        const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+        if (ts && (Date.now() - parseInt(ts, 10)) > MAX_AGE) {
+            store.removeItem('smattaker_user_token');
+            store.removeItem('smattaker_refresh_token');
+            store.removeItem('smattaker_session_ts');
+            return null;
+        }
+        return token;
+    }
+    function _clearSession() {
+        [localStorage, sessionStorage].forEach(s => {
+            try { s.removeItem('smattaker_user_token'); } catch (e) {}
+            try { s.removeItem('smattaker_refresh_token'); } catch (e) {}
+            try { s.removeItem('smattaker_session_ts'); } catch (e) {}
+        });
+    }
+    // ── Bot-issued token bootstrap ────────────────────────────
+    // When the Telegram bot's /login command sends a link to
+    // /dashboard?token=<JWT>#rt=<refresh>, this block saves both into
+    // localStorage so the existing _loadSession() / authFetch() logic
+    // picks them up automatically. The token is then stripped from the
+    // URL bar so it's not visible or re-shareable after first load.
+    (function _bootstrapBotToken() {
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        if (urlToken) {
+            localStorage.setItem('smattaker_user_token', urlToken);
+            localStorage.setItem('smattaker_session_ts', Date.now().toString());
+            // Refresh token is in the URL hash (#rt=...) so it never
+            // reaches the server log. window.location.hash keeps it
+            // client-side only.
+            const hashParams = new URLSearchParams(
+                window.location.hash.replace(/^#/, '')
+            );
+            const rt = hashParams.get('rt');
+            if (rt) localStorage.setItem('smattaker_refresh_token', rt);
+            // Strip the token from the URL bar for cleanliness + privacy.
+            if (window.history && window.history.replaceState) {
+                const cleanUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
+    })();
+
+    TOKEN = _loadSession();
+    if (!TOKEN) { window.location.href = '/login'; }
+
+    function showToast(msg, type = 'success') {
+        const el = document.getElementById('toast');
+        // 'warning' is a new type for soft-success-but-attention-needed
+        // cases (e.g. credentials saved but server-side test was geo-blocked).
+        const color = type === 'error' ? 'bg-loss' : type === 'warning' ? 'bg-warn' : 'bg-win';
+        el.innerHTML = `<div class="${color} text-void font-bold text-sm px-5 py-3 rounded-xl shadow-lg max-w-md">${msg}</div>`;
+        el.classList.remove('hidden');
+        // Warnings stay visible longer so the user actually reads them.
+        const ttl = type === 'warning' ? 7000 : 3500;
+        setTimeout(() => el.classList.add('hidden'), ttl);
+    }
+
+    // ⚠️ Silent refresh: an expired access token used to log the user
+    // out immediately on the very next API call, even though a valid
+    // refresh token existed. Now it transparently exchanges the refresh
+    // token for a new pair and retries the original request ONCE before
+    // giving up — the user never notices their access token expired.
+    let _refreshInFlight = null;
+    async function tryRefreshToken() {
+        if (_refreshInFlight) return _refreshInFlight;
+        const refreshToken = localStorage.getItem('smattaker_refresh_token')
+            || sessionStorage.getItem('smattaker_refresh_token');
+        if (!refreshToken) return false;
+
+        _refreshInFlight = (async () => {
+            try {
+                const res = await fetch(`/api/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`, { method: 'POST' });
+                if (!res.ok) return false;
+                const json = await res.json();
+                if (json.data && json.data.token) {
+                    TOKEN = json.data.token;
+                    const store = localStorage.getItem('smattaker_user_token') ? localStorage : sessionStorage;
+                    store.setItem('smattaker_user_token', json.data.token);
+                    if (json.data.refresh_token) store.setItem('smattaker_refresh_token', json.data.refresh_token);
+                    store.setItem('smattaker_session_ts', Date.now().toString());
+                    return true;
+                }
+                return false;
+            } catch (e) {
+                return false;
+            } finally {
+                _refreshInFlight = null;
+            }
+        })();
+        return _refreshInFlight;
+    }
+
+    async function authFetch(url, options = {}, _retried = false) {
+        const headers = Object.assign({}, options.headers || {}, { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' });
+        const res = await fetch(url, Object.assign({}, options, { headers }));
+        if (res.status === 401) {
+            if (!_retried) {
+                const refreshed = await tryRefreshToken();
+                if (refreshed) return authFetch(url, options, true);
+            }
+            // Either refresh wasn't possible, or the retried request is
+            // STILL unauthorized even with a fresh token — either way
+            // there's no valid session left, so log out properly rather
+            // than silently returning a failed response.
+            _clearSession();
+            window.location.href = '/login';
+        }
+        return res;
+    }
+    function logout() {
+        _clearSession();
+        window.location.href = '/login';
+    }
+
+    document.querySelectorAll('.nav-tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+    let _activeTab = 'overview';
+    function switchTab(tab) {
+        _activeTab = tab;
+        document.querySelectorAll('.nav-tab').forEach(b => {
+            const active = b.dataset.tab === tab;
+            b.classList.toggle('text-gold', active); b.classList.toggle('border-gold', active);
+            b.classList.toggle('text-slate-400', !active); b.classList.toggle('border-transparent', !active);
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+        // Immediately reload the tab data when the user switches to it
+        if (tab === 'signals') { loadSignals(); }
+        else if (tab === 'trades') { loadMyTrades(); }
+        else if (tab === 'status') { loadTradeStatus(); }
+        else if (tab === 'analytics') { loadAnalytics(); }
+        else if (tab === 'profile') { loadProfileSection(); }
+        else if (tab === 'live') { connectLivePortfolio(); }
+        else { disconnectLivePortfolio(); }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // Live Portfolio WebSocket
+    // ══════════════════════════════════════════════════════
+    let _livePortfolioSocket = null;
+
+    function connectLivePortfolio() {
+        disconnectLivePortfolio();
+        const token = localStorage.getItem('smattaker_user_token') || sessionStorage.getItem('smattaker_user_token');
+        if (!token) { document.getElementById('liveStatusText').textContent = 'Not signed in.'; return; }
+
+        const accountType = document.getElementById('liveAccountType').value;
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${proto}//${window.location.host}/ws/portfolio?token=${encodeURIComponent(token)}&account_type=${accountType}`;
+
+        const dot = document.getElementById('liveDot');
+        const statusText = document.getElementById('liveStatusText');
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-warn animate-pulse';
+        statusText.textContent = 'Connecting…';
+
+        const ws = new WebSocket(url);
+        _livePortfolioSocket = ws;
+
+        ws.onopen = () => {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-win';
+            statusText.textContent = 'Live — updating every few seconds';
+        };
+        ws.onmessage = (event) => {
+            try { renderLivePortfolio(JSON.parse(event.data)); } catch (e) { console.error(e); }
+        };
+        ws.onerror = () => {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-loss';
+            statusText.textContent = 'Connection error — retrying…';
+        };
+        ws.onclose = () => {
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-600';
+            if (_activeTab === 'live') {
+                statusText.textContent = 'Disconnected — reconnecting…';
+                setTimeout(() => { if (_activeTab === 'live') connectLivePortfolio(); }, 3000);
+            }
+        };
+    }
+
+    function disconnectLivePortfolio() {
+        if (_livePortfolioSocket) {
+            _livePortfolioSocket.onclose = null; // prevent the auto-reconnect handler from firing
+            _livePortfolioSocket.close();
+            _livePortfolioSocket = null;
+        }
+    }
+
+    document.getElementById('liveAccountType').addEventListener('change', () => {
+        if (_activeTab === 'live') connectLivePortfolio();
+    });
+
+    function renderLivePortfolio(data) {
+        document.getElementById('liveOpenCount').textContent = data.open_count ?? '—';
+
+        const unrealizedEl = document.getElementById('liveUnrealized');
+        if (data.total_unrealized_usd != null) {
+            const u = data.total_unrealized_usd;
+            unrealizedEl.textContent = `${u >= 0 ? '+' : ''}${u.toFixed(2)} USD`;
+            unrealizedEl.className = `text-xl font-bold ${u >= 0 ? 'text-win' : 'text-loss'}`;
+        } else {
+            unrealizedEl.textContent = '—';
+        }
+
+        document.getElementById('liveBalance').textContent = data.balance != null ? `${data.balance.toFixed(2)} USD` : '—';
+        document.getElementById('liveEquity').textContent = data.equity != null ? `${data.equity.toFixed(2)} USD` : '—';
+
+        const list = document.getElementById('livePositionsList');
+        if (!data.positions || data.positions.length === 0) {
+            list.innerHTML = `<div class="text-center text-muted py-10 text-sm">No open positions.</div>`;
+            return;
+        }
+        list.innerHTML = data.positions.map(p => {
+            if (p.status === 'price_unavailable') {
+                return `<div class="px-5 py-3 flex items-center justify-between text-sm">
+                    <span class="font-semibold text-white">${p.symbol}</span>
+                    <span class="text-xs text-muted">Price unavailable</span>
+                </div>`;
+            }
+            const positive = p.unrealized_pct >= 0;
+            const dirIcon = p.direction === 'long' ? '▲' : '▼';
+            return `<div class="px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg">${dirIcon}</span>
+                    <div>
+                        <p class="font-semibold text-white text-sm">${p.symbol} <span class="text-[10px] text-muted uppercase">${p.direction}</span></p>
+                        <p class="text-[11px] text-muted">Entry ${p.entry_price} → Now ${p.current_price?.toFixed?.(5) ?? p.current_price}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-sm ${positive ? 'text-win' : 'text-loss'}">${positive ? '+' : ''}${p.unrealized_pct.toFixed(2)}%</p>
+                    <p class="text-[11px] text-muted">${positive ? '+' : ''}${p.unrealized_usd.toFixed(2)} USD · ${p.r_multiple >= 0 ? '+' : ''}${p.r_multiple.toFixed(2)}R</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.addEventListener('beforeunload', disconnectLivePortfolio);
+
+
+    function statusBadge(status) {
+        const map = { active: 'bg-win/15 text-win', pending_approval: 'bg-warn/15 text-warn', trial: 'bg-gold/15 text-gold',
+            banned: 'bg-loss/15 text-loss', inactive: 'bg-slate-600/20 text-slate-400', completed: 'bg-win/15 text-win',
+            executed: 'bg-win/15 text-win', expired: 'bg-slate-600/20 text-slate-400', cancelled: 'bg-loss/15 text-loss' };
+        return `<span class="badge ${map[status] || 'bg-slate-600/20 text-slate-400'}">${(status||'').replace(/_/g,' ').toUpperCase()}</span>`;
+    }
+
+    // ⚠️ FIX: statusBadge() above hardcodes status "completed" → green
+    // ("win") regardless of outcome. That's correct for a payment or
+    // subscription (a "completed" payment IS a good thing) but WRONG for
+    // a trade — a trade that hit STOP LOSS is also status="completed",
+    // so every losing trade closed by the signal monitor showed the exact
+    // same green "COMPLETED" badge as a winner in the Trade Journal,
+    // making TP hits and SL hits visually indistinguishable. This reads
+    // exit_reason/is_winner (not just the lifecycle status) so a losing
+    // trade actually shows red "SL HIT", not green "COMPLETED".
+    function tradeStatusBadge(t) {
+        if (t.status === 'active') {
+            return `<span class="badge bg-gold/15 text-gold">ACTIVE</span>`;
+        }
+        if (t.status === 'completed') {
+            const reasonLabel = { tp: 'TP HIT', sl: 'SL HIT', trailing_stop: 'TRAILING STOP',
+                manual: 'CLOSED', expired: 'TIMED OUT', liquidated: 'LIQUIDATED', error: 'ERROR' };
+            if (t.is_winner === true) {
+                return `<span class="badge bg-win/15 text-win">${reasonLabel[t.exit_reason] || 'WON'}</span>`;
+            }
+            if (t.is_winner === false) {
+                return `<span class="badge bg-loss/15 text-loss">${reasonLabel[t.exit_reason] || 'LOST'}</span>`;
+            }
+            // is_winner is null (e.g. a manual close with no P&L computed) —
+            // fall back to a neutral label rather than a misleading green one.
+            return `<span class="badge bg-slate-600/20 text-slate-400">${reasonLabel[t.exit_reason] || 'CLOSED'}</span>`;
+        }
+        return statusBadge(t.status);
+    }
+
+    let PROFILE = null;
+
+    async function loadProfile() {
+        const res = await authFetch('/api/account/me/full');
+        const json = await res.json();
+        if (!res.ok) { showToast(json.detail || 'Could not load your profile', 'error'); return; }
+        PROFILE = json.data || {};
+        // ⚠️ DEFENSIVE: server may return null for empty arrays (Pydantic
+        // edge case), and PROFILE.subscriptions[0] would throw a TypeError
+        // that silently aborts the rest of loadProfile — leaving the entire
+        // dashboard stuck on "Loading..." forever. Same for the other list
+        // fields. Coerce all of them to [].
+        PROFILE.subscriptions = PROFILE.subscriptions || [];
+        PROFILE.exchange_connections = PROFILE.exchange_connections || [];
+        PROFILE.risk_settings = PROFILE.risk_settings || [];
+        const u = PROFILE.user || {};
+
+        document.getElementById('userGreeting').textContent = `Welcome, ${u.full_name || u.telegram_username || 'trader'}`;
+
+        if (u.status === 'pending_approval') {
+            const banner = document.getElementById('approvalBanner');
+            if (banner) {
+                banner.classList.remove('hidden');
+                banner.textContent = '⏳ Your account is pending admin approval. Signals and trading will unlock once approved.';
+            }
+        }
+
+        const accountBlock = document.getElementById('accountBlock');
+        if (accountBlock) {
+            accountBlock.innerHTML = `
+                <div class="flex justify-between"><span class="text-muted">Status</span>${statusBadge(u.status)}</div>
+                <div class="flex justify-between"><span class="text-muted">Telegram</span><span>@${u.telegram_username || '—'}</span></div>
+                <div class="flex justify-between"><span class="text-muted">Language</span><span class="uppercase">${u.language || 'en'}</span></div>
+                <div class="flex justify-between"><span class="text-muted">Member since</span><span>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</span></div>
+            `;
+        }
+
+        const sub = (PROFILE.subscriptions && PROFILE.subscriptions.length > 0) ? PROFILE.subscriptions[0] : null;
+        const subActive = sub && ['paid', 'trial_active'].includes(sub.payment_status) && (!sub.end_date || new Date(sub.end_date) > new Date());
+        document.getElementById('subscriptionBlock').innerHTML = subActive ? `
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-white font-semibold capitalize">${sub.plan_type} Plan — $${sub.amount_usd}/mo</div>
+                    <div class="text-xs text-muted mt-1">Renews: ${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'Never (lifetime)'}</div>
+                </div>
+                ${statusBadge(sub.payment_status)}
+            </div>` : `
+            <div>
+                <p class="mb-3">No active subscription yet.</p>
+                <button onclick="openSubscribeFlow()" class="gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg"><i class="fa-solid fa-bolt mr-2"></i>Subscribe Now</button>
+            </div>
+            <div id="subscribeFlow" class="hidden mt-4 pt-4 border-t border-line"></div>`;
+
+        // ── Update the Getting Started checklist based on user state ──
+        // Each step shows a green ✓ once completed, so the user can see at
+        // a glance what they still need to do. Step 1 is account-type choice
+        // (default is "paper" so onboarding_completed === true counts as done);
+        // step 2 is platform connection (any exchange row counts); step 3 is
+        // risk settings (any non-default row counts); step 4 is first trade.
+        try {
+            updateGettingStarted(u, PROFILE);
+            renderExchanges();
+            renderRiskForm();
+        } catch (e) {
+            // Never let a downstream render failure abort the whole
+            // loadProfile — that's what left the dashboard on "Loading…"
+            // forever in the previous version. Log + continue.
+            console.error('loadProfile downstream render failed:', e);
+        }
+    }
+
+    function updateGettingStarted(u, profile) {
+        // Step 1 — onboarding completed (chose account type)
+        const step1Done = !!(u && u.onboarding_completed);
+        // Step 2 — at least one exchange connection (any platform, any status)
+        const step2Done = !!((profile.exchange_connections || []).length > 0);
+        // Step 3 — at least one risk settings row (any account type)
+        const step3Done = !!((profile.risk_settings || []).length > 0);
+        // Step 4 — has at least one trade. We don't have trades loaded here,
+        // so we read the flag from localStorage that loadMyTrades() sets.
+        const step4Done = localStorage.getItem('has_trades') === '1';
+
+        const states = [
+            ['gsStep1Icon', step1Done],
+            ['gsStep2Icon', step2Done],
+            ['gsStep3Icon', step3Done],
+            ['gsStep4Icon', step4Done],
+        ];
+        states.forEach(([id, done]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (done) {
+                el.className = 'w-6 h-6 rounded-full bg-win/20 text-win flex items-center justify-center text-xs font-bold';
+                el.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else {
+                el.className = 'w-6 h-6 rounded-full bg-slate-600/30 text-slate-400 flex items-center justify-center text-xs font-bold';
+                el.textContent = id.replace('gsStep', '').replace('Icon', '');
+            }
+        });
+    }
+
+    async function openSubscribeFlow() {
+        const el = document.getElementById('subscribeFlow');
+        el.classList.remove('hidden');
+        el.innerHTML = `<p class="text-xs text-muted">Loading payment options...</p>`;
+
+        try {
+            const res = await authFetch('/api/payments/wallet-info');
+            const json = await res.json();
+            const w = json.data;
+
+            if (!w.configured) {
+                el.innerHTML = `<p class="text-sm text-warn">Manual crypto payment isn't configured yet. Please contact the admin directly.</p>`;
+                return;
+            }
+
+            let addressHtml = '';
+            w.networks.forEach(n => {
+                addressHtml += `<div class="mb-2"><span class="text-xs text-muted">${n.label}:</span><div class="font-mono text-xs bg-void/50 rounded-lg p-2 mt-1 break-all">${n.address}</div></div>`;
+            });
+            const networkOptions = w.networks.map(n => `<option value="${n.key}">${n.label}</option>`).join('');
+
+            el.innerHTML = `
+                <p class="text-sm mb-3">Send exactly <span class="text-gold font-bold">$${w.price_usd}</span> to the matching network address below — <strong class="text-warn">sending on the wrong network can lose the funds permanently.</strong></p>
+                ${addressHtml}
+                <form id="txForm" class="mt-4 space-y-2">
+                    <label class="text-xs text-muted block">Network you sent on</label>
+                    <select id="txCurrency" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm bg-void/50">
+                        ${networkOptions}
+                    </select>
+                    <label class="text-xs text-muted block">Transaction hash (after sending)</label>
+                    <input id="txHashInput" required placeholder="0x... or transaction ID" class="w-full border border-line rounded-lg px-3 py-2.5 text-sm bg-void/50">
+                    <button type="submit" class="gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg w-full">Submit for Review</button>
+                </form>
+            `;
+
+            document.getElementById('txForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    tx_hash: document.getElementById('txHashInput').value,
+                    currency: document.getElementById('txCurrency').value,
+                    amount: w.price_usd,
+                };
+                const vres = await authFetch('/api/payments/crypto/verify', { method: 'POST', body: JSON.stringify(payload) });
+                const vjson = await vres.json();
+                if (vres.ok) {
+                    showToast('Submitted! An admin will review and activate your subscription shortly.');
+                    el.innerHTML = `<p class="text-sm text-win">✅ Submitted for review — you'll be notified via Telegram once approved.</p>`;
+                } else {
+                    showToast(vjson.detail || 'Submission failed', 'error');
+                }
+            });
+        } catch (e) {
+            el.innerHTML = `<p class="text-sm text-loss">Could not load payment info. Try again shortly.</p>`;
+        }
+    }
+
+    // Adaptive price formatter — small cryptos (TRX, SHIB, PEPE) need
+    // many decimals; high-value assets (BTC, Gold) need few. Showing
+    // everything with 2 decimals truncates $0.0334 to $0.03 which is
+    // the bug the user saw.
+    function fmtPrice(p) {
+        if (p === null || p === undefined) return '—';
+        const n = Number(p);
+        if (!isFinite(n) || n === 0) return '$0.00';
+        const abs = Math.abs(n);
+        if (abs >= 1000) return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (abs >= 1)      return '$' + n.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4});
+        if (abs >= 0.01)   return '$' + n.toFixed(6);
+        return '$' + n.toFixed(8);
+    }
+
+    async function loadSignals() {
+        const res = await authFetch('/api/signals/active');
+        const json = await res.json();
+        const list = document.getElementById('signalsList');
+        const upd = document.getElementById('signalsUpdated');
+        if (!res.ok) {
+            // ⚠️ Differentiate between "you don't have access" and "server
+            // blew up" so the user knows what to do next. A 403 means
+            // their account isn't approved/active yet — show a friendly
+            // explanation with the actual next step (wait for admin or
+            // activate a trial). Anything else is a real error.
+            const detail = json.detail || 'Could not load signals.';
+            const is403 = res.status === 403;
+            list.innerHTML = is403
+                ? `<div class="col-span-2 bg-card border border-warn/30 rounded-2xl p-6 text-center">
+                       <div class="text-warn text-3xl mb-3"><i class="fa-solid fa-lock"></i></div>
+                       <h3 class="font-bold text-white mb-2">Signals unlock after admin approval</h3>
+                       <p class="text-sm text-muted mb-4">${detail}</p>
+                       <p class="text-xs text-muted">If you've been waiting more than 24h, message the admin via the Telegram bot.</p>
+                   </div>`
+                : `<p class="text-muted text-sm col-span-2 text-center py-8">${detail}</p>`;
+            if (upd) upd.textContent = '';
+            return;
+        }
+        if (upd) { const now = new Date(); upd.textContent = '· updated ' + now.toLocaleTimeString(); }
+        const items = json.data || [];
+        list.innerHTML = items.length ? items.map(s => {
+            const tpPrice = (s.take_profit_levels && s.take_profit_levels[0]) ? s.take_profit_levels[0].price : '—';
+            const conf = (s.confidence_score||0);
+            const confColor = conf >= 70 ? 'text-win' : conf >= 55 ? 'text-gold' : 'text-slate-400';
+            const confBucket = conf >= 70 ? 'HIGH' : conf >= 55 ? 'MED' : 'LOW';
+            return `
+            <div class="bg-card border border-line rounded-2xl p-5 hover:border-gold/40 transition-colors">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-white text-lg">${s.symbol}</span>
+                        <span class="text-xs text-muted">${(s.asset_class||'').toUpperCase()}</span>
+                    </div>
+                    <span class="badge ${s.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${s.direction.toUpperCase()}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div><div class="text-muted">Entry</div><div class="font-semibold">${fmtPrice(s.entry_price)}</div></div>
+                    <div><div class="text-muted">Stop Loss</div><div class="font-semibold text-loss">${fmtPrice(s.stop_loss)}</div></div>
+                    <div><div class="text-muted">Take Profit</div><div class="font-semibold text-win">${fmtPrice(tpPrice)}</div></div>
+                </div>
+                <div class="flex items-center justify-between mt-3 text-xs">
+                    <div class="text-muted">🧠 <span class="${confColor} font-bold">${conf.toFixed(1)}%</span> <span class="text-slate-500">${confBucket}</span></div>
+                    <div class="text-muted">R:R ${s.risk_reward_ratio ? s.risk_reward_ratio.toFixed(2) : '—'}</div>
+                </div>
+                ${s.entry_time ? `<div class="text-xs text-muted mt-1">🕐 ${new Date(s.entry_time).toLocaleString()}</div>` : ''}
+                <div class="mt-4 pt-3 border-t border-line">
+                    <button onclick="trackSignal('${s.id}', '${s.symbol}', '${s.direction}', ${s.entry_price}, ${s.stop_loss}, '${(s.asset_class||'crypto')}', '${(s.exchange||'')}', '${(s.strategy_type||'v45.4.1')}')" class="w-full gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+                        <i class="fa-solid fa-crosshairs mr-2"></i>Track Trade
+                    </button>
+                </div>
+            </div>`;
+        }).join('') : `<div class="col-span-2 bg-card border border-line rounded-2xl p-8 text-center">
+                <div class="text-gold text-3xl mb-3"><i class="fa-solid fa-satellite-dish"></i></div>
+                <h3 class="font-bold text-white mb-2">No active signals right now</h3>
+                <p class="text-sm text-muted">The strategy engine scans the market every 15 minutes. New signals will appear here automatically — check back shortly, or browse your tracked trades in the <button onclick="switchTab('trades')" class="text-gold underline">My Trades</button> tab.</p>
+            </div>`;
+    }
+
+    // ── Track Trade from the web dashboard ──────────────────
+    // Mirrors the bot's "Track Trade" button — creates a Trade record
+    // for the user's currently-selected account type (default_account_type).
+    // The signal monitor then watches it for SL/TP/8h-timeout and
+    // updates P&L automatically.
+    async function trackSignal(signalId, symbol, direction, entryPrice, stopLoss, assetClass, exchange, strategyType) {
+        // Bail out if the user hasn't chosen an account type yet.
+        const accType = (PROFILE && PROFILE.user && PROFILE.user.default_account_type) || 'paper';
+        const accLabel = accType.toUpperCase();
+
+        // Compute position size based on account type
+        let positionSizeUsd = 100.0; // default for demo/real
+        if (accType === 'paper') {
+            const paperBalance = (PROFILE && PROFILE.user && PROFILE.user.paper_balance) || 10000.0;
+            const riskPct = 0.02; // 2% risk per trade
+            const riskAmountUsd = paperBalance * riskPct;
+            const stopDistPct = Math.abs((entryPrice - stopLoss) / entryPrice) || 0.02;
+            positionSizeUsd = Math.min(riskAmountUsd / stopDistPct, paperBalance * 0.5);
+        } else if (accType === 'demo') {
+            // Demo: $10,000 virtual balance with 2% risk (same logic as paper)
+            const demoBalance = 10000.0;
+            const riskPct = 0.02;
+            const riskAmountUsd = demoBalance * riskPct;
+            const stopDistPct = Math.abs((entryPrice - stopLoss) / entryPrice) || 0.02;
+            positionSizeUsd = Math.min(riskAmountUsd / stopDistPct, demoBalance * 0.5);
+        } else if (accType === 'real') {
+            // Real: $100 default — real sizing happens in trade_executor
+            // when the user has connected an exchange AND the connection
+            // test passed. Until then, we still record the trade so the
+            // user has a journal of what they intended to execute.
+            positionSizeUsd = 100.0;
+        }
+
+        const confirmMsg = `Track ${symbol} ${direction.toUpperCase()} (${accLabel})?` +
+            `\nEntry: $${entryPrice}\nSize: $${positionSizeUsd.toFixed(2)}\n\nThe signal monitor will auto-close at SL/TP or after 8h.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            // Build the payload mirroring TradeCreate schema
+            const body = {
+                signal_id: signalId,
+                account_type: accType,
+                symbol: symbol,
+                exchange: exchange || null,
+                direction: direction,
+                entry_price: entryPrice,
+                entry_time: new Date().toISOString(),
+                stop_loss: stopLoss,
+                take_profit_levels: null, // backend will fetch from signal if needed
+                position_size: positionSizeUsd / entryPrice,
+                position_size_usd: positionSizeUsd,
+                leverage: 1,
+                risk_percent: 2.0,
+                strategy: strategyType || 'v45.4.1',
+                asset_class: assetClass || 'crypto',
+            };
+            const res = await authFetch('/api/trades/', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            const json = await res.json();
+            if (res.ok && json.data) {
+                showToast(`✅ ${accLabel} trade tracked: ${symbol} ${direction.toUpperCase()} — $${positionSizeUsd.toFixed(2)}`, 'success');
+                // Refresh trades list + getting started checklist
+                loadMyTrades().then(() => {
+                    if (PROFILE) updateGettingStarted(PROFILE.user, PROFILE);
+                });
+                loadTradeStatus();
+            } else {
+                showToast(`❌ Failed to track: ${json.detail || 'Unknown error'}`, 'error');
+            }
+        } catch (e) {
+            showToast(`❌ Network error: ${e.message}`, 'error');
+        }
+    }
+    // Expose for inline onclick handlers
+    window.trackSignal = trackSignal;
+
+    async function loadMyTrades() {
+        const res = await authFetch('/api/trades/');
+        const json = await res.json();
+        const body = document.getElementById('myTradesBody');
+        if (!res.ok) { body.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-6">${json.detail || 'Could not load trades.'}</td></tr>`; return; }
+        const items = (json.data && json.data.trades) || [];
+        // Cache whether the user has any trades at all — Overview's
+        // Getting Started checklist reads this to mark step 4 done.
+        localStorage.setItem('has_trades', items.length > 0 ? '1' : '0');
+        body.innerHTML = items.length ? items.map(t => `
+            <tr class="border-t border-line">
+                <td class="px-4 py-3 font-semibold">${t.symbol}</td>
+                <td class="px-4 py-3"><span class="badge ${t.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${t.direction.toUpperCase()}</span></td>
+                <td class="px-4 py-3"><span class="badge ${(t.account_type||'').toLowerCase()==='paper'?'bg-gold/15 text-gold':(t.account_type||'').toLowerCase()==='real'?'bg-win/15 text-win':'bg-slate-600/20 text-slate-400'}">${(t.account_type||'demo').toUpperCase()}</span></td>
+                <td class="px-4 py-3 text-right">${fmtPrice(t.entry_price)}</td>
+                <td class="px-4 py-3 text-right">${t.exit_price != null ? fmtPrice(t.exit_price) : '—'}</td>
+                <td class="px-4 py-3 text-right ${(t.pnl_percent??0)>=0?'text-win':'text-loss'}">${t.pnl_percent!=null ? t.pnl_percent.toFixed(2)+'%' : '—'}</td>
+                <td class="px-4 py-3 text-right ${(t.r_multiple??0)>=0?'text-win':'text-loss'}">${t.r_multiple!=null ? t.r_multiple.toFixed(2)+'R' : '—'}</td>
+                <td class="px-4 py-3 text-center">${tradeStatusBadge(t)}</td>
+            </tr>`).join('') : `<tr><td colspan="8" class="text-center py-12">
+                <div class="text-gold text-3xl mb-3"><i class="fa-solid fa-chart-line"></i></div>
+                <h3 class="font-bold text-white mb-2">No trades yet</h3>
+                <p class="text-sm text-muted mb-4">Track your first signal to start building your trade journal.</p>
+                <button onclick="switchTab('signals')" class="gold-btn text-void font-bold text-sm px-4 py-2.5 rounded-lg">Browse Signals →</button>
+            </td></tr>`;
+    }
+
+    // ── Trade Status: open positions + recent outcomes + KPIs ──
+    async function loadTradeStatus() {
+        try {
+            const res = await authFetch('/api/trades/');
+            const json = await res.json();
+            if (!res.ok) return;
+            const allTrades = (json.data && json.data.trades) || [];
+            const openTrades = allTrades.filter(t => t.status === 'active');
+            const completedTrades = allTrades.filter(t => t.status === 'completed');
+
+            // KPIs
+            const totalPnl = completedTrades.reduce((s, t) => s + (t.pnl_usd || 0), 0);
+            const wins = completedTrades.filter(t => t.is_winner === true).length;
+            const losses = completedTrades.filter(t => t.is_winner === false).length;
+            const winRate = completedTrades.length > 0 ? (wins / completedTrades.length * 100) : 0;
+            const kpiHtml = `
+                <div class="bg-card border border-line rounded-2xl p-4">
+                    <div class="text-xs text-muted mb-1">Open Positions</div>
+                    <div class="text-2xl font-bold text-gold">${openTrades.length}</div>
+                </div>
+                <div class="bg-card border border-line rounded-2xl p-4">
+                    <div class="text-xs text-muted mb-1">Completed</div>
+                    <div class="text-2xl font-bold text-white">${completedTrades.length}</div>
+                </div>
+                <div class="bg-card border border-line rounded-2xl p-4">
+                    <div class="text-xs text-muted mb-1">Win Rate</div>
+                    <div class="text-2xl font-bold ${winRate>=50?'text-win':'text-loss'}">${winRate.toFixed(0)}%</div>
+                </div>
+                <div class="bg-card border border-line rounded-2xl p-4">
+                    <div class="text-xs text-muted mb-1">Total P&L</div>
+                    <div class="text-2xl font-bold ${totalPnl>=0?'text-win':'text-loss'}">${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}</div>
+                </div>`;
+            const kpiEl = document.getElementById('statusKpis');
+            if (kpiEl) kpiEl.innerHTML = kpiHtml;
+
+            // Open positions
+            const openEl = document.getElementById('openPositionsList');
+            if (openEl) {
+                openEl.innerHTML = openTrades.length ? openTrades.map(t => `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                        <div class="flex items-center gap-3">
+                            <span class="badge ${t.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${t.direction.toUpperCase()}</span>
+                            <div>
+                                <div class="font-semibold text-white">${t.symbol}</div>
+                                <div class="text-xs text-muted">Entry: ${fmtPrice(t.entry_price)} · SL: ${fmtPrice(t.stop_loss)}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="badge ${(t.account_type||'').toLowerCase()==='paper'?'bg-gold/15 text-gold':(t.account_type||'').toLowerCase()==='real'?'bg-win/15 text-win':'bg-slate-600/20 text-slate-400'}">${(t.account_type||'demo').toUpperCase()}</div>
+                            <div class="text-xs text-muted mt-1">${new Date(t.entry_time).toLocaleString()}</div>
+                        </div>
+                    </div>`).join('') : `<p class="text-muted text-sm text-center py-6">No open positions. Track a signal to start.</p>`;
+            }
+
+            // Recent outcomes (last 24h)
+            const now = Date.now();
+            const recent = completedTrades.filter(t => t.exit_time && (now - new Date(t.exit_time).getTime()) < 86400000).slice(0, 10);
+            const recentEl = document.getElementById('recentOutcomesList');
+            if (recentEl) {
+                recentEl.innerHTML = recent.length ? recent.map(t => {
+                    const pnl = t.pnl_percent || 0;
+                    const pnlUsd = t.pnl_usd || 0;
+                    const emoji = t.is_winner ? '🎯' : '🛑';
+                    return `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg">${emoji}</span>
+                            <div>
+                                <div class="font-semibold text-white">${t.symbol} <span class="text-xs text-muted">${t.direction.toUpperCase()}</span></div>
+                                <div class="text-xs text-muted">${t.exit_reason || 'closed'} · ${new Date(t.exit_time).toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${pnl>=0?'text-win':'text-loss'}">${pnl>=0?'+':''}${pnl.toFixed(2)}%</div>
+                            <div class="text-xs ${pnlUsd>=0?'text-win':'text-loss'}">${pnlUsd>=0?'+':''}$${pnlUsd.toFixed(2)}</div>
+                        </div>
+                    </div>`;
+                }).join('') : `<p class="text-muted text-sm text-center py-6">No completed trades in the last 24 hours.</p>`;
+            }
+
+            // Overview active trades snapshot
+            const ovEl = document.getElementById('overviewActiveTrades');
+            if (ovEl) {
+                ovEl.innerHTML = openTrades.slice(0, 3).map(t => `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-2 border border-line text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="badge ${t.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${t.direction.toUpperCase()}</span>
+                            <span class="font-semibold">${t.symbol}</span>
+                        </div>
+                        <span class="text-xs text-muted">${fmtPrice(t.entry_price)}</span>
+                    </div>`).join('') || `<p class="text-muted text-sm text-center py-4">No open positions.</p>`;
+            }
+        } catch (e) {
+            console.error('loadTradeStatus error:', e);
+        }
+    }
+
+    // ── Analysis: KPIs + win rate by class + top symbols ──
+    // ── Analytics charts state ──
+    let _userEquityChart = null, _userWinLossChart = null, _userMonthlyChart = null;
+    let _userDrawdownChart = null, _userRDistributionChart = null;
+
+    async function loadAnalytics() {
+        try {
+            // Use the institutional dashboard endpoint (gives equity_curve,
+            // r_heatmap, top_instruments, full summary in one call)
+            const res = await authFetch('/api/analytics/dashboard?period_days=365');
+            const json = await res.json();
+            const data = res.ok && json.data ? json.data : null;
+            const s = (data && data.summary) || {};
+
+            // ── KPI cards (8 metrics now, not 4) ──
+            const kpiEl = document.getElementById('analyticsKpis');
+            if (kpiEl) {
+                if (data && s.total_trades > 0) {
+                    const cards = [
+                        ['Total Trades', s.total_trades || 0, 'fa-list-check', 'text-white'],
+                        ['Win Rate', `${(s.win_rate ?? 0).toFixed(1)}%`, 'fa-trophy', (s.win_rate ?? 0) >= 50 ? 'text-win' : 'text-loss'],
+                        ['Profit Factor', (s.profit_factor ?? 0).toFixed(2), 'fa-coins', 'text-gold'],
+                        ['Total Return', `${(s.total_return ?? 0) >= 0 ? '+' : ''}${(s.total_return ?? 0).toFixed(2)}%`, 'fa-percent', (s.total_return ?? 0) >= 0 ? 'text-win' : 'text-loss'],
+                        ['Sharpe Ratio', (s.sharpe_ratio ?? 0).toFixed(2), 'fa-scale-balanced', 'text-gold'],
+                        ['Sortino Ratio', (s.sortino_ratio ?? 0).toFixed(2), 'fa-water', 'text-gold'],
+                        ['Max Drawdown', `${(s.max_drawdown_pct ?? 0).toFixed(2)}%`, 'fa-arrow-trend-down', 'text-loss'],
+                        ['Avg R-Multiple', `${(s.average_r ?? 0).toFixed(2)}R`, 'fa-bullseye', (s.average_r ?? 0) >= 0 ? 'text-win' : 'text-loss'],
+                    ];
+                    kpiEl.innerHTML = cards.map(([label, val, icon, color]) => `
+                        <div class="bg-card border border-line rounded-2xl p-4">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="text-xs text-muted mb-1">${label}</div>
+                                    <div class="text-2xl font-bold ${color}">${val}</div>
+                                </div>
+                                <i class="fa-solid ${icon} text-sm ${color} opacity-60"></i>
+                            </div>
+                        </div>`).join('');
+                } else {
+                    kpiEl.innerHTML = `<div class="col-span-4 text-center text-muted text-sm py-8">
+                        <i class="fa-solid fa-chart-line text-3xl text-gold mb-3 block"></i>
+                        Complete some trades to unlock your full analytics dashboard.
+                    </div>`;
+                }
+            }
+
+            // ── Equity curve chart ──
+            const curve = (data && data.equity_curve) || [];
+            renderUserEquityChart(curve);
+
+            // ── Win/Loss pie chart (from summary) ──
+            renderUserWinLossChart(s.winning_trades || 0, s.losing_trades || 0);
+
+            // ── Monthly R-performance bar chart (from r_heatmap) ──
+            const heatmap = (data && data.r_heatmap) || { cells: [] };
+            renderUserMonthlyChart(heatmap.cells || []);
+
+            // ── Drawdown curve (derived from equity curve) ──
+            renderUserDrawdownChart(curve);
+
+            // ── Win rate by asset class ──
+            const rankings = (data && data.top_instruments) || [];
+            const classStats = {};
+            rankings.forEach(r => {
+                const cls = r.asset_class || 'unknown';
+                if (!classStats[cls]) classStats[cls] = { wins: 0, total: 0, pnl: 0 };
+                classStats[cls].total += r.total_trades || 0;
+                classStats[cls].wins += Math.round((r.win_rate / 100) * (r.total_trades || 0));
+                classStats[cls].pnl += (r.best_trade_pct || 0);
+            });
+
+            const wrByClassEl = document.getElementById('winRateByClass');
+            if (wrByClassEl) {
+                const entries = Object.entries(classStats);
+                wrByClassEl.innerHTML = entries.length ? entries.map(([cls, st]) => {
+                    const wr = st.total > 0 ? (st.wins / st.total * 100) : 0;
+                    return `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                        <span class="font-semibold capitalize">${cls}</span>
+                        <div class="text-right">
+                            <span class="font-bold ${wr>=50?'text-win':'text-loss'}">${wr.toFixed(0)}%</span>
+                            <span class="text-xs text-muted ml-2">(${st.wins}/${st.total})</span>
+                        </div>
+                    </div>`;
+                }).join('') : `<p class="text-muted text-sm text-center py-4">No completed trades yet.</p>`;
+            }
+
+            // ── Top symbols (from rankings, sorted by avg_r desc) ──
+            const topSyms = rankings.slice().sort((a, b) => (b.avg_r || 0) - (a.avg_r || 0)).slice(0, 8);
+            const topEl = document.getElementById('topSymbols');
+            if (topEl) {
+                topEl.innerHTML = topSyms.length ? topSyms.map(r => {
+                    const wr = r.win_rate || 0;
+                    return `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                        <div>
+                            <span class="font-semibold">${r.symbol}</span>
+                            <span class="text-xs text-muted ml-2 capitalize">${r.asset_class}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold ${(r.avg_r || 0) >= 0 ? 'text-win' : 'text-loss'}">${(r.avg_r || 0) >= 0 ? '+' : ''}${(r.avg_r || 0).toFixed(2)}R</span>
+                            <span class="text-xs text-muted ml-2">${wr.toFixed(0)}% WR · ${r.total_trades} trades</span>
+                        </div>
+                    </div>`;
+                }).join('') : `<p class="text-muted text-sm text-center py-4">No symbol performance data yet.</p>`;
+            }
+
+            // ── R-distribution histogram ──
+            // Compute from completed trades via the trades API
+            const tradesRes = await authFetch('/api/trades/');
+            const tradesJson = await tradesRes.json();
+            const trades = (tradesRes.ok && tradesJson.data && tradesJson.data.trades) || [];
+            const completed = trades.filter(t => t.status === 'completed');
+            renderUserRDistributionChart(completed);
+
+            // ── Recent signal outcomes ──
+            const sigRes = await authFetch('/api/signals/active');
+            const sigJson = sigRes.ok ? await sigRes.json() : { data: [] };
+            const sigEl = document.getElementById('signalOutcomesList');
+            if (sigEl) {
+                const sigs = (sigJson.data || []).slice(0, 5);
+                sigEl.innerHTML = sigs.length ? sigs.map(s => `
+                    <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                        <div class="flex items-center gap-2">
+                            <span class="badge ${s.direction === 'long' ? 'bg-win/15 text-win' : 'bg-loss/15 text-loss'}">${s.direction.toUpperCase()}</span>
+                            <span class="font-semibold">${s.symbol}</span>
+                        </div>
+                        <div class="text-right text-xs text-muted">
+                            <div>Conf: ${(s.confidence_score||0).toFixed(0)}%</div>
+                            <div>${s.entry_time ? new Date(s.entry_time).toLocaleDateString() : ''}</div>
+                        </div>
+                    </div>`).join('') : `<p class="text-muted text-sm text-center py-4">No recent signals.</p>`;
+            }
+        } catch (e) {
+            console.error('loadAnalytics error:', e);
+        }
+    }
+
+    function renderUserEquityChart(curve) {
+        const canvas = document.getElementById('equityChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const labels = curve.map(p => new Date(p.date).toLocaleDateString());
+        const values = curve.map(p => p.equity);
+        if (_userEquityChart) _userEquityChart.destroy();
+        if (!curve.length) {
+            ctx.font = '13px Manrope';
+            ctx.fillStyle = '#8B93A8';
+            ctx.textAlign = 'center';
+            ctx.fillText('Equity curve will appear once trades are completed.', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+        _userEquityChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{
+                data: values, borderColor: '#D4AF37', borderWidth: 2, pointRadius: 0, tension: 0.35,
+                fill: true, backgroundColor: (c) => {
+                    const g = c.chart.ctx.createLinearGradient(0, 0, 0, 280);
+                    g.addColorStop(0, 'rgba(212,175,55,0.25)'); g.addColorStop(1, 'rgba(212,175,55,0)');
+                    return g;
+                }
+            }]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(30,39,64,0.6)' }, ticks: { color: '#8B93A8', font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { color: '#8B93A8', font: { size: 10 }, maxTicksLimit: 8 } }
+                }
+            }
+        });
+    }
+
+    function renderUserWinLossChart(wins, losses) {
+        const canvas = document.getElementById('winLossChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (_userWinLossChart) _userWinLossChart.destroy();
+        if (wins === 0 && losses === 0) {
+            ctx.font = '13px Manrope';
+            ctx.fillStyle = '#8B93A8';
+            ctx.textAlign = 'center';
+            ctx.fillText('No completed trades yet.', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+        _userWinLossChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Wins', 'Losses'],
+                datasets: [{
+                    data: [wins, losses],
+                    backgroundColor: ['#22C55E', '#EF4444'],
+                    borderColor: '#10162A', borderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#8B93A8', font: { size: 12 }, padding: 12 } },
+                    tooltip: { callbacks: { label: (c) => `${c.label}: ${c.raw} (${((c.raw/(wins+losses))*100).toFixed(1)}%)` } }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    function renderUserMonthlyChart(cells) {
+        const canvas = document.getElementById('monthlyChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (_userMonthlyChart) _userMonthlyChart.destroy();
+        if (!cells.length) {
+            ctx.font = '13px Manrope';
+            ctx.fillStyle = '#8B93A8';
+            ctx.textAlign = 'center';
+            ctx.fillText('Monthly performance will appear after first trades resolve.', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+        _userMonthlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: cells.map(c => c.period),
+                datasets: [{
+                    data: cells.map(c => c.r_value),
+                    backgroundColor: cells.map(c => c.r_value >= 0 ? '#22C55E' : '#EF4444'),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(30,39,64,0.6)' }, ticks: { color: '#8B93A8', callback: (v) => v + 'R' } },
+                    x: { grid: { display: false }, ticks: { color: '#8B93A8', font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    function renderUserDrawdownChart(curve) {
+        const canvas = document.getElementById('drawdownChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (_userDrawdownChart) _userDrawdownChart.destroy();
+        if (!curve.length) {
+            ctx.font = '13px Manrope';
+            ctx.fillStyle = '#8B93A8';
+            ctx.textAlign = 'center';
+            ctx.fillText('Drawdown curve will appear once trades are completed.', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+        // Compute drawdown from equity curve
+        let peak = curve[0].equity;
+        const drawdowns = curve.map(p => {
+            peak = Math.max(peak, p.equity);
+            return peak > 0 ? ((p.equity - peak) / peak * 100) : 0;
+        });
+        _userDrawdownChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: curve.map(p => new Date(p.date).toLocaleDateString()),
+                datasets: [{
+                    data: drawdowns,
+                    borderColor: '#EF4444', borderWidth: 2, pointRadius: 0, tension: 0.3,
+                    fill: true, backgroundColor: 'rgba(239,68,68,0.15)'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(30,39,64,0.6)' }, ticks: { color: '#8B93A8', callback: (v) => v.toFixed(1) + '%' } },
+                    x: { grid: { display: false }, ticks: { color: '#8B93A8', font: { size: 10 }, maxTicksLimit: 8 } }
+                }
+            }
+        });
+    }
+
+    function renderUserRDistributionChart(trades) {
+        const canvas = document.getElementById('rDistributionChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (_userRDistributionChart) _userRDistributionChart.destroy();
+        if (!trades.length) {
+            ctx.font = '13px Manrope';
+            ctx.fillStyle = '#8B93A8';
+            ctx.textAlign = 'center';
+            ctx.fillText('R-multiple distribution will appear once trades are completed.', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+        // Bucket R-multiples into ranges: -3R, -2R, -1R, 0R, +1R, +2R, +3R
+        const buckets = { '-3R': 0, '-2R': 0, '-1R': 0, '0R': 0, '+1R': 0, '+2R': 0, '+3R': 0 };
+        trades.forEach(t => {
+            const r = t.r_multiple != null ? t.r_multiple : 0;
+            const bucket = Math.max(-3, Math.min(3, Math.round(r)));
+            const key = (bucket >= 0 ? '+' : '') + bucket + 'R';
+            buckets[key] = (buckets[key] || 0) + 1;
+        });
+        const labels = Object.keys(buckets);
+        const values = Object.values(buckets);
+        _userRDistributionChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: labels.map(l => l.startsWith('-') ? '#EF4444' : l === '0R' ? '#8B93A8' : '#22C55E'),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(30,39,64,0.6)' }, ticks: { color: '#8B93A8', stepSize: 1 } },
+                    x: { grid: { display: false }, ticks: { color: '#8B93A8', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ── Profile section ──
+    async function loadProfileSection() {
+        if (!PROFILE) await loadProfile();
+        if (!PROFILE) return;
+        const u = PROFILE.user;
+        const accType = u.default_account_type || 'paper';
+        const accLabels = { paper: '📝 PAPER (Virtual $10,000)', demo: '🧪 DEMO', real: '💰 REAL' };
+        const paperBal = u.paper_balance != null ? u.paper_balance : 10000;
+        const paperInit = u.paper_initial_balance != null ? u.paper_initial_balance : 10000;
+        const paperPnl = paperBal - paperInit;
+        const paperPnlPct = paperInit > 0 ? (paperPnl / paperInit * 100) : 0;
+
+        const detailsEl = document.getElementById('profileDetails');
+        if (detailsEl) {
+            detailsEl.innerHTML = `
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">Full Name</span><span class="font-semibold">${u.full_name || '—'}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">📧 Email</span><span class="font-semibold">${u.email || 'Not set — use /auth in bot'}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">💬 Telegram</span><span class="font-semibold">@${u.telegram_username || '—'}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">🆔 Telegram ID</span><span class="font-mono text-xs">${u.telegram_id}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">🌐 Language</span><span class="font-semibold uppercase">${u.language}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">📅 Member Since</span><span class="font-semibold">${new Date(u.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="flex justify-between border-b border-line pb-2">
+                    <span class="text-muted">🔄 Status</span>${statusBadge(u.status)}
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-muted">👑 Role</span><span class="font-semibold uppercase">${u.role}</span>
+                </div>`;
+        }
+
+        const accEl = document.getElementById('accountTypeBlock');
+        if (accEl) {
+            const accBtns = ['paper', 'demo', 'real'].map(t => {
+                const active = accType === t;
+                const label = accLabels[t] || t;
+                const cls = active
+                    ? (t === 'paper' ? 'bg-gold text-void border-gold' : t === 'real' ? 'bg-win text-void border-win' : 'bg-slate-500 text-white border-slate-500')
+                    : 'bg-void/40 text-slate-300 border-line hover:border-gold/40';
+                return `<button onclick="setAccountType('${t}')" class="${cls} border rounded-lg px-3 py-2 text-sm font-semibold transition">${label}</button>`;
+            }).join('');
+            accEl.innerHTML = `
+                <div class="flex items-center justify-between bg-void/40 rounded-lg p-3 border border-line">
+                    <span class="text-sm text-muted">Current Type</span>
+                    <span class="font-bold">${accLabels[accType] || accType}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">${accBtns}</div>
+                ${accType === 'paper' ? `
+                <div class="bg-void/40 rounded-lg p-3 border border-line">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-muted">Paper Balance</span>
+                        <span class="font-bold text-gold">$${paperBal.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-muted">P&L</span>
+                        <span class="font-bold ${paperPnl>=0?'text-win':'text-loss'}">${paperPnl>=0?'+':''}$${paperPnl.toFixed(2)} (${paperPnlPct>=0?'+':''}${paperPnlPct.toFixed(2)}%)</span>
+                    </div>
+                </div>` : ''}
+                <p class="text-xs text-muted">Switch anytime. PAPER = virtual $10,000. DEMO = simulated with risk settings. REAL = live trading on your connected platform.</p>`;
+        }
+    }
+
+    // Set account type from the web (mirrors the bot's onboarding flow)
+    async function setAccountType(t) {
+        if (!confirm(`Switch your account type to ${t.toUpperCase()}?`)) return;
+        try {
+            const res = await authFetch('/api/account/me/account-type', {
+                method: 'PUT',
+                body: JSON.stringify({ account_type: t }),
+            });
+            const json = await res.json();
+            if (res.ok) {
+                showToast(`✅ Account type set to ${t.toUpperCase()}`, 'success');
+                // Refresh profile + getting started checklist
+                await loadProfile();
+                if (PROFILE) updateGettingStarted(PROFILE.user, PROFILE);
+                loadProfileSection();
+            } else {
+                showToast(`❌ ${json.detail || 'Failed to update'}`, 'error');
+            }
+        } catch (e) {
+            showToast(`❌ Network error: ${e.message}`, 'error');
+        }
+    }
+    window.setAccountType = setAccountType;
+
+    function renderExchanges() {
+        const list = document.getElementById('exchangesList');
+        const items = PROFILE.exchange_connections || [];
+        list.innerHTML = items.length ? items.map(e => {
+            const isMT5 = (e.exchange_name || '').toLowerCase() === 'mt5';
+            // v45: detect MetaApi live mode by checking if the api_key_preview
+            // looks like a UUID fragment (8 hex chars at the start). When MetaApi
+            // credentials are stored, the api_key field is the Account ID (UUID).
+            const isMetaApiLive = isMT5 && /^[0-9a-f]{4,}$/i.test((e.api_key_preview || '').replace(/[^0-9a-f]/gi, '').slice(0, 8));
+            const subLine = isMT5
+                ? (isMetaApiLive
+                    ? `<span class="text-gold font-semibold">● LIVE</span> · MetaApi Bridge · Server: ${e.mt5_server || '—'} ${e.is_testnet ? '· Demo' : '· Real'}`
+                    : `Login: ${e.api_key_preview} · Server: ${e.mt5_server || '—'} ${e.is_testnet ? '· Demo' : '· Real'} <span class="text-warn text-[10px]">(stub mode — no live bridge)</span>`)
+                : `Key: ${e.api_key_preview} ${e.is_testnet ? '· Testnet' : ''}`;
+            const icon = isMT5 ? '📊' : '🔗';
+
+            // ⚠️ Geo-block detection: a connection_status of "ok" with a
+            // non-empty connection_error means the credentials were saved
+            // but the server's region is geo-blocked by the exchange's CDN
+            // (e.g. Bybit's CloudFront blocks Render's US IPs). Show a
+            // yellow "GEO-BLOCK" badge alongside the green OK badge so the
+            // user understands the credentials may still be valid.
+            const isGeoBlocked = e.connection_status === 'ok' && e.connection_error;
+            const statusBadgeHtml = isGeoBlocked
+                ? `<span class="badge bg-win/15 text-win">OK</span>
+                   <span class="badge bg-warn/15 text-warn" title="${(e.connection_error||'').replace(/"/g,'&quot;')}">GEO-BLOCK</span>`
+                : `<span class="badge ${e.connection_status === 'ok' ? 'bg-win/15 text-win' : e.connection_status === 'error' ? 'bg-loss/15 text-loss' : 'bg-slate-600/20 text-slate-400'}">${(e.connection_status||'unknown').toUpperCase()}</span>`;
+
+            return `
+            <div class="bg-card border border-line rounded-xl p-4 flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-white capitalize">${icon} ${e.exchange_label || e.exchange_name} <span class="text-xs text-muted">(${e.exchange_name})</span></div>
+                    <div class="text-xs text-muted mt-1">${subLine}</div>
+                    ${isGeoBlocked ? `<div class="text-xs text-warn mt-2 truncate" title="${(e.connection_error||'').replace(/"/g,'&quot;')}"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${(e.connection_error||'').substring(0,80)}…</div>` : ''}
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    ${statusBadgeHtml}
+                    <span class="badge ${e.is_active ? 'bg-gold/15 text-gold' : 'bg-slate-600/20 text-slate-400'}">${e.is_active ? 'ENABLED' : 'DISABLED'}</span>
+                    <button onclick="toggleExchange('${e.id}')" class="w-8 h-8 rounded-lg bg-void/60 hover:bg-void text-slate-300 transition"><i class="fa-solid fa-power-off text-xs"></i></button>
+                    <button onclick="deleteExchange('${e.id}')" class="w-8 h-8 rounded-lg bg-loss/10 hover:bg-loss/20 text-loss transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+            </div>`;
+        }).join('') : `<div class="bg-card border border-line rounded-2xl p-8 text-center">
+            <div class="text-gold text-3xl mb-3"><i class="fa-solid fa-plug"></i></div>
+            <h3 class="font-bold text-white mb-2">No platforms connected yet</h3>
+            <p class="text-sm text-muted mb-4">Connect an exchange (MEXC, KuCoin, Bybit, OKX) or MT5 broker to start trading.</p>
+            <p class="text-xs text-muted">Use the form above to add your first platform. ↑</p>
+        </div>`;
+    }
+
+    document.getElementById('exchangeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const platformType = document.getElementById('exPlatformType').value;
+        const isMT5 = platformType === 'mt5';
+        const exchangeName = isMT5 ? 'mt5' : document.getElementById('exExchange').value;
+        if (!exchangeName) { showToast('Select an exchange first', 'error'); return; }
+        const payload = {
+            exchange_name: exchangeName,
+            exchange_label: document.getElementById('exLabel').value || null,
+            api_key: document.getElementById('exApiKey').value,
+            secret_key: document.getElementById('exSecretKey').value,
+            passphrase: document.getElementById('exPassphrase').value || null,
+            is_testnet: document.getElementById('exTestnet').checked,
+        };
+        // v45: include MetaApi live bridge fields when MT5 + filled
+        if (isMT5) {
+            const maId = document.getElementById('exMetaapiAccountId').value.trim();
+            const maTok = document.getElementById('exMetaapiApiToken').value.trim();
+            if (maId && maTok) {
+                payload.metaapi_account_id = maId;
+                payload.metaapi_api_token = maTok;
+            }
+        }
+        const res = await authFetch('/api/account/exchange', { method: 'POST', body: JSON.stringify(payload) });
+        const json = await res.json();
+        if (res.ok) {
+            // The API returns the geo-block warning in `message` when
+            // credentials were saved but the server can't reach the
+            // exchange from its region. Show it as a yellow warning
+            // toast so the user understands their creds are stored.
+            const data = json.data || {};
+            const isGeoBlocked = data.connection_status === 'ok' && data.connection_error;
+            const toastType = isGeoBlocked ? 'warning' : 'success';
+            showToast(json.message || 'Platform connected', toastType);
+            e.target.reset();
+            syncPlatformTypeUI();
+            loadProfile();
+        } else {
+            showToast(json.detail || 'Failed to connect platform', 'error');
+        }
+    });
+
+    // Show/hide the exchange dropdown based on platform type selection.
+    // When MT5 is selected, the exchange dropdown is hidden and the
+    // placeholder text on the API key/password fields changes to show
+    // MT5-specific guidance.
+    function syncPlatformTypeUI() {
+        const platformType = document.getElementById('exPlatformType').value;
+        const isMT5 = platformType === 'mt5';
+        const exExchange = document.getElementById('exExchange');
+        const exApiKey = document.getElementById('exApiKey');
+        const exSecretKey = document.getElementById('exSecretKey');
+        const exPassphrase = document.getElementById('exPassphrase');
+        const mt5Section = document.getElementById('mt5MetaApiSection');
+        const mt5Note = document.getElementById('mt5AutoConnectNote');
+        const mt5Toggle = document.getElementById('mt5AdvancedToggle');
+        if (isMT5) {
+            exExchange.parentElement.style.display = 'none';
+            exExchange.required = false;
+            exApiKey.placeholder = 'MT5 Login (e.g. 51234567)';
+            exSecretKey.placeholder = 'MT5 Password';
+            exPassphrase.placeholder = 'MT5 Server (e.g. ICMarketsSC-Demo02)';
+            if (mt5Note) mt5Note.classList.remove('hidden');
+            if (mt5Toggle) mt5Toggle.classList.remove('hidden');
+            if (mt5Section) mt5Section.classList.add('hidden'); // starts collapsed — advanced/optional
+        } else {
+            exExchange.parentElement.style.display = '';
+            exExchange.required = true;
+            exApiKey.placeholder = 'API Key';
+            exSecretKey.placeholder = 'Secret Key';
+            exPassphrase.placeholder = 'Passphrase (OKX only)';
+            if (mt5Note) mt5Note.classList.add('hidden');
+            if (mt5Toggle) mt5Toggle.classList.add('hidden');
+            if (mt5Section) mt5Section.classList.add('hidden');
+        }
+    }
+    document.getElementById('exPlatformType').addEventListener('change', syncPlatformTypeUI);
+    syncPlatformTypeUI();
+
+    async function toggleExchange(id) {
+        const res = await authFetch(`/api/account/exchange/${id}/toggle`, { method: 'PUT' });
+        if (res.ok) { showToast('Exchange updated'); loadProfile(); } else showToast('Failed', 'error');
+    }
+    async function deleteExchange(id) {
+        if (!confirm('Remove this exchange connection permanently?')) return;
+        const res = await authFetch(`/api/account/exchange/${id}`, { method: 'DELETE' });
+        if (res.ok) { showToast('Exchange removed'); loadProfile(); } else showToast('Failed', 'error');
+    }
+
+    function renderRiskForm() {
+        const risk = (PROFILE.risk_settings || []).find(r => r.account_type === document.getElementById('riskAccountType').value) || PROFILE.risk_settings[0];
+        if (!risk) return;
+        document.getElementById('riskAccountType').value = risk.account_type;
+        document.getElementById('riskSizingMethod').value = risk.position_sizing_method;
+        document.getElementById('riskMaxPerTrade').value = risk.max_risk_per_trade_pct;
+        document.getElementById('riskFixedSize').value = risk.fixed_position_size;
+        document.getElementById('riskMaxLeverage').value = risk.max_leverage;
+        document.getElementById('riskMaxOpen').value = risk.max_open_positions;
+    }
+    document.getElementById('riskAccountType').addEventListener('change', renderRiskForm);
+
+    document.getElementById('riskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            account_type: document.getElementById('riskAccountType').value,
+            position_sizing_method: document.getElementById('riskSizingMethod').value,
+            max_risk_per_trade_pct: parseFloat(document.getElementById('riskMaxPerTrade').value),
+            fixed_position_size: parseFloat(document.getElementById('riskFixedSize').value),
+            max_leverage: parseInt(document.getElementById('riskMaxLeverage').value),
+            max_open_positions: parseInt(document.getElementById('riskMaxOpen').value),
+        };
+        const res = await authFetch('/api/account/risk', { method: 'PUT', body: JSON.stringify(payload) });
+        const json = await res.json();
+        if (res.ok) { showToast('Risk settings saved'); loadProfile(); } else showToast(json.detail || 'Failed to save', 'error');
+    });
+
+    // Boot — fire all four loaders in parallel; loadMyTrades caches the
+    // "has_trades" flag in localStorage, then we re-run updateGettingStarted
+    // so the Overview checklist reflects step 4 as soon as we know the answer.
+    loadProfile();
+    loadSignals();
+    loadMyTrades().then(() => {
+        // After trades load, the has_trades flag is set — refresh the
+        // checklist if PROFILE is already loaded (otherwise loadProfile
+        // will pick up the flag itself on its way through).
+        if (PROFILE) updateGettingStarted(PROFILE.user, PROFILE);
+    });
+    loadTradeStatus();
+
+    // ── Auto-refresh ──────────────────────────────────────────
+    // Signals are regenerated by the scheduler every 15 minutes,
+    // so refreshing every 60 seconds is plenty for the user to
+    // see new entries without hammering the API.  We only fire
+    // when the relevant tab is visible so background tabs don't waste
+    // bandwidth.  Trade status refreshes faster (30s) because open
+    // positions can change quickly.
+    let _signalsTimer = setInterval(() => {
+        if (_activeTab === 'signals' || _activeTab === 'overview') {
+            loadSignals();
+        }
+        if (_activeTab === 'trades') {
+            loadMyTrades();
+        }
+        if (_activeTab === 'status' || _activeTab === 'overview') {
+            loadTradeStatus();
+        }
+    }, 30000);  // 30s — faster refresh so trade status feels live
+    // Stop the timer if the page is hidden for a long time to save resources
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            clearInterval(_signalsTimer);
+            _signalsTimer = null;
+        } else if (!_signalsTimer) {
+            // Resume when the user comes back — and refresh immediately
+            loadSignals();
+            if (_activeTab === 'trades') { loadMyTrades(); }
+            if (_activeTab === 'status' || _activeTab === 'overview') { loadTradeStatus(); }
+            _signalsTimer = setInterval(() => {
+                if (_activeTab === 'signals' || _activeTab === 'overview') { loadSignals(); }
+                if (_activeTab === 'trades') { loadMyTrades(); }
+                if (_activeTab === 'status' || _activeTab === 'overview') { loadTradeStatus(); }
+            }, 30000);
+        }
+    });
+</script>
+</body>
+</html>
+
