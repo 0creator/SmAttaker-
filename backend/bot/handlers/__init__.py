@@ -1,0 +1,3 @@
+"""
+SmAttaker — Bot Handlers Package
+"""

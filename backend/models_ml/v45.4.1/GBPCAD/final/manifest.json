@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "GBPCAD",
+  "train_end_date": "2025-03-31",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T22:37:02.743615Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 32,
+      "cv_auc": 0.579567572070083,
+      "baseline_wr": 47.565543071161045,
+      "best_wr": 60.86956521739131,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 31,
+      "cv_auc": 0.5544415292353824,
+      "baseline_wr": 39.6551724137931,
+      "best_wr": 43.956043956043956,
+      "inverted": true
+    }
+  },
+  "n_train_trades": 650,
+  "n_total_bars": 17328,
+  "is_period": {
+    "start": "2023-11-07",
+    "end": "2025-03-31"
+  },
+  "oos_period": {
+    "start": "2025-03-31",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "GBPCAD=X",
+  "asset_class": "forex"
+}

@@ -1,0 +1,360 @@
+{
+ "asof": "2026-09-08 01:33:17.959686+00:00",
+ "note": "descriptive transfer study of the frozen X-W39P5-THU book; no per-asset selection; IS boundary 2024-01-01",
+ "spans": {
+  "BTCUSDT": {
+   "start": "2018-01-01 00:00:00+00:00",
+   "end": "2026-08-27 21:00:00+00:00",
+   "bars": 151463
+  },
+  "SOLUSDT": {
+   "start": "2020-08-11 06:00:00+00:00",
+   "end": "2026-08-29 10:00:00+00:00",
+   "bars": 105996
+  },
+  "ETHUSDT": {
+   "start": "2017-08-17 04:00:00+00:00",
+   "end": "2026-08-29 10:00:00+00:00",
+   "bars": 158090
+  },
+  "BNBUSDT": {
+   "start": "2017-11-06 03:30:00+00:00",
+   "end": "2026-08-29 10:00:00+00:00",
+   "bars": 154216
+  },
+  "XRPUSDT": {
+   "start": "2018-05-04 08:00:00+00:00",
+   "end": "2026-08-29 13:30:00+00:00",
+   "bars": 145694
+  },
+  "DOGEUSDT": {
+   "start": "2019-07-05 12:00:00+00:00",
+   "end": "2026-08-29 13:00:00+00:00",
+   "bars": 125281
+  },
+  "EURUSDT": {
+   "start": "2020-01-03 08:00:00+00:00",
+   "end": "2026-09-08 01:00:00+00:00",
+   "bars": 117033
+  },
+  "GBPUSDT": {
+   "start": "2020-07-20 12:00:00+00:00",
+   "end": "2023-12-29 02:30:00+00:00",
+   "bars": 60273
+  },
+  "AUDUSDT": {
+   "start": "2020-08-07 02:00:00+00:00",
+   "end": "2023-06-01 05:30:00+00:00",
+   "bars": 49307
+  },
+  "PAXGUSDT": {
+   "start": "2020-08-28 12:00:00+00:00",
+   "end": "2026-09-08 01:30:00+00:00",
+   "bars": 105631
+  }
+ },
+ "assets": {
+  "BTCUSDT": {
+   "policy": "frozen",
+   "asset_class": "crypto",
+   "bars": 151463,
+   "start": "2018-01-01",
+   "end": "2026-08-27",
+   "IS": {
+    "N": 571,
+    "WR": 52.2,
+    "expR": 0.311,
+    "pay": 2.264,
+    "sumR": 177.8
+   },
+   "OOS_W": {
+    "N": 328,
+    "WR": 48.2,
+    "expR": 0.113,
+    "pay": 1.514,
+    "sumR": 36.9
+   },
+   "full": {
+    "N": 899,
+    "WR": 50.7,
+    "expR": 0.239,
+    "pay": 1.957,
+    "sumR": 214.7
+   },
+   "DD_R_full": 6.3,
+   "balance": 0.9298,
+   "max_bars": 23
+  },
+  "SOLUSDT": {
+   "policy": "frozen",
+   "asset_class": "crypto",
+   "bars": 105996,
+   "start": "2020-08-11",
+   "end": "2026-08-29",
+   "IS": {
+    "N": 191,
+    "WR": 39.8,
+    "expR": 0.118,
+    "pay": 2.182,
+    "sumR": 22.5
+   },
+   "OOS_W": {
+    "N": 158,
+    "WR": 41.1,
+    "expR": 0.024,
+    "pay": 1.536,
+    "sumR": 3.8
+   },
+   "full": {
+    "N": 349,
+    "WR": 40.4,
+    "expR": 0.075,
+    "pay": 1.855,
+    "sumR": 26.3
+   },
+   "DD_R_full": 14.2,
+   "balance": 0.7359,
+   "max_bars": 23
+  },
+  "ETHUSDT": {
+   "policy": "ported",
+   "asset_class": "crypto",
+   "bars": 158090,
+   "start": "2017-08-17",
+   "end": "2026-08-29",
+   "IS": {
+    "N": 868,
+    "WR": 49.9,
+    "expR": 0.09,
+    "pay": 1.345,
+    "sumR": 77.7
+   },
+   "OOS_W": {
+    "N": 308,
+    "WR": 52.9,
+    "expR": 0.128,
+    "pay": 1.385,
+    "sumR": 39.4
+   },
+   "full": {
+    "N": 1176,
+    "WR": 50.7,
+    "expR": 0.1,
+    "pay": 1.353,
+    "sumR": 117.1
+   },
+   "DD_R_full": 15.0,
+   "balance": 0.5524,
+   "max_bars": 23
+  },
+  "BNBUSDT": {
+   "policy": "ported",
+   "asset_class": "crypto",
+   "bars": 154216,
+   "start": "2017-11-06",
+   "end": "2026-08-29",
+   "IS": {
+    "N": 860,
+    "WR": 47.4,
+    "expR": 0.068,
+    "pay": 1.404,
+    "sumR": 58.7
+   },
+   "OOS_W": {
+    "N": 420,
+    "WR": 45.0,
+    "expR": 0.02,
+    "pay": 1.306,
+    "sumR": 8.3
+   },
+   "full": {
+    "N": 1280,
+    "WR": 46.6,
+    "expR": 0.052,
+    "pay": 1.369,
+    "sumR": 67.0
+   },
+   "DD_R_full": 16.3,
+   "balance": 0.5766,
+   "max_bars": 23
+  },
+  "XRPUSDT": {
+   "policy": "ported",
+   "asset_class": "crypto",
+   "bars": 145694,
+   "start": "2018-05-04",
+   "end": "2026-08-29",
+   "IS": {
+    "N": 558,
+    "WR": 46.2,
+    "expR": 0.033,
+    "pay": 1.309,
+    "sumR": 18.5
+   },
+   "OOS_W": {
+    "N": 247,
+    "WR": 44.9,
+    "expR": 0.004,
+    "pay": 1.243,
+    "sumR": 1.0
+   },
+   "full": {
+    "N": 805,
+    "WR": 45.8,
+    "expR": 0.024,
+    "pay": 1.288,
+    "sumR": 19.5
+   },
+   "DD_R_full": 19.8,
+   "balance": 0.5376,
+   "max_bars": 23
+  },
+  "DOGEUSDT": {
+   "policy": "ported",
+   "asset_class": "crypto",
+   "bars": 125281,
+   "start": "2019-07-05",
+   "end": "2026-08-29",
+   "IS": {
+    "N": 352,
+    "WR": 45.7,
+    "expR": 0.022,
+    "pay": 1.276,
+    "sumR": 7.7
+   },
+   "OOS_W": {
+    "N": 259,
+    "WR": 43.2,
+    "expR": 0.072,
+    "pay": 1.672,
+    "sumR": 18.6
+   },
+   "full": {
+    "N": 611,
+    "WR": 44.7,
+    "expR": 0.043,
+    "pay": 1.43,
+    "sumR": 26.3
+   },
+   "DD_R_full": 11.2,
+   "balance": 0.524,
+   "max_bars": 23
+  },
+  "EURUSDT": {
+   "policy": "ported",
+   "asset_class": "forex",
+   "bars": 117033,
+   "start": "2020-01-03",
+   "end": "2026-09-08",
+   "IS": {
+    "N": 400,
+    "WR": 45.0,
+    "expR": -0.082,
+    "pay": 0.922,
+    "sumR": -32.9
+   },
+   "OOS_W": {
+    "N": 255,
+    "WR": 32.2,
+    "expR": -0.14,
+    "pay": 1.421,
+    "sumR": -35.8
+   },
+   "full": {
+    "N": 655,
+    "WR": 40.0,
+    "expR": -0.105,
+    "pay": 1.077,
+    "sumR": -68.7
+   },
+   "DD_R_full": 91.7,
+   "balance": 0.3786,
+   "max_bars": 23
+  },
+  "GBPUSDT": {
+   "policy": "ported",
+   "asset_class": "forex",
+   "bars": 60273,
+   "start": "2020-07-20",
+   "end": "2023-12-29",
+   "IS": {
+    "N": 378,
+    "WR": 40.2,
+    "expR": -0.12,
+    "pay": 0.971,
+    "sumR": -45.5
+   },
+   "OOS_W": {
+    "N": 0
+   },
+   "full": {
+    "N": 378,
+    "WR": 40.2,
+    "expR": -0.12,
+    "pay": 0.971,
+    "sumR": -45.5
+   },
+   "DD_R_full": 45.7,
+   "balance": 0.3988,
+   "max_bars": 23
+  },
+  "AUDUSDT": {
+   "policy": "ported",
+   "asset_class": "forex",
+   "bars": 49307,
+   "start": "2020-08-07",
+   "end": "2023-06-01",
+   "IS": {
+    "N": 372,
+    "WR": 39.8,
+    "expR": -0.096,
+    "pay": 1.056,
+    "sumR": -35.5
+   },
+   "OOS_W": {
+    "N": 0
+   },
+   "full": {
+    "N": 372,
+    "WR": 39.8,
+    "expR": -0.096,
+    "pay": 1.056,
+    "sumR": -35.5
+   },
+   "DD_R_full": 40.8,
+   "balance": 0.4337,
+   "max_bars": 23
+  },
+  "PAXGUSDT": {
+   "policy": "ported",
+   "asset_class": "gold",
+   "bars": 105631,
+   "start": "2020-08-28",
+   "end": "2026-09-08",
+   "IS": {
+    "N": 412,
+    "WR": 51.7,
+    "expR": 0.09,
+    "pay": 1.349,
+    "sumR": 36.9
+   },
+   "OOS_W": {
+    "N": 499,
+    "WR": 48.9,
+    "expR": 0.125,
+    "pay": 1.533,
+    "sumR": 62.5
+   },
+   "full": {
+    "N": 911,
+    "WR": 50.2,
+    "expR": 0.109,
+    "pay": 1.449,
+    "sumR": 99.4
+   },
+   "DD_R_full": 16.1,
+   "balance": 0.554,
+   "max_bars": 23
+  }
+ }
+}

@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "USDCHF",
+  "train_end_date": "2025-03-31",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T22:40:05.656694Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 32,
+      "cv_auc": 0.5592118333166926,
+      "baseline_wr": 45.04716981132076,
+      "best_wr": 52.0618556701031,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 31,
+      "cv_auc": 0.5610959216222374,
+      "baseline_wr": 38.297872340425535,
+      "best_wr": 43.75,
+      "inverted": true
+    }
+  },
+  "n_train_trades": 518,
+  "n_total_bars": 17180,
+  "is_period": {
+    "start": "2023-11-07",
+    "end": "2025-03-31"
+  },
+  "oos_period": {
+    "start": "2025-03-31",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "USDCHF=X",
+  "asset_class": "forex"
+}

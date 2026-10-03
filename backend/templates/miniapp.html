@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#05070D">
+    <title>SmAttaker — Signal Details</title>
+
+    <!-- ── Telegram Mini App SDK ───────────────────────────────────── -->
+    <!-- Provides window.Telegram.WebApp with initData, theme, mainButton,
+         BackButton, HapticFeedback, etc. Required for any Mini App that
+         wants to read the user's identity or close itself back to the chat. -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- ── TradingView Embedded Chart Widget ──────────────────────────
+         NOTE: this is the OFFICIAL TradingView embedded chart widget script.
+         It exposes a single global `TradingView` object that you instantiate
+         with `new TradingView.widget({...})`. The widget renders an iframe
+         with the live chart for the symbol you pass in.
+
+         ⚠️ CRITICAL: the symbol MUST use the correct exchange prefix.
+         "NASDAQ:SNAP" → "This symbol doesn't exist" (SNAP trades on NYSE).
+         "NYSE:SNAP"  → renders correctly.
+         The backend passes a pre-resolved symbol via the `data-tv-symbol`
+         attribute on the #chart container — derived from
+         backend.utils.tv_symbols.map_symbol_to_tv(). -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #05070D; color: #E5E7EB; -webkit-font-smoothing: antialiased; }
+        body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+        :root {
+            --bg-void: #05070D;
+            --bg-card: #10162A;
+            --bg-elevated: #161E36;
+            --border-line: #1E2740;
+            --gold: #D4AF37;
+            --gold-light: #F0D683;
+            --green: #10B981;
+            --red: #EF4444;
+            --orange: #F59E0B;
+            --blue: #3B82F6;
+            --purple: #8B5CF6;
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: linear-gradient(180deg, rgba(212,175,55,0.06) 0%, transparent 100%);
+            border-bottom: 1px solid var(--border-line);
+            position: sticky; top: 0; z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+        .header-logo {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, #F0D683 0%, #D4AF37 60%, #C9A227 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; color: #05070D; font-size: 16px;
+        }
+        .header-title { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+        .header-sub { font-size: 11px; color: #6B7280; margin-top: 1px; }
+        .header-close {
+            margin-left: auto;
+            background: transparent; border: none; color: #9CA3AF;
+            font-size: 22px; cursor: pointer; padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .header-close:active { background: rgba(255,255,255,0.05); }
+
+        /* ── Live P&L banner ── */
+        .pnl-banner {
+            background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,7,13,0.5));
+            border-bottom: 1px solid var(--border-line);
+            padding: 14px 16px;
+        }
+        .pnl-banner.negative {
+            background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(5,7,13,0.5));
+        }
+        .pnl-label { font-size: 10px; color: #9CA3AF; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; }
+        .pnl-value { font-size: 28px; font-weight: 800; margin-top: 4px; }
+        .pnl-value.positive { color: var(--green); }
+        .pnl-value.negative { color: var(--red); }
+        .pnl-current-price { font-size: 12px; color: #6B7280; margin-top: 4px; }
+
+        /* ── Chart section ── */
+        .chart-section { padding: 14px; }
+        .chart-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .chart-title {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600; color: #fff;
+        }
+        .live-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .chart-symbol { font-size: 11px; color: #6B7280; }
+        .chart-symbol a { color: #9CA3AF; text-decoration: none; }
+        .tv-link {
+            display: inline-block; margin-top: 10px;
+            padding: 8px 18px; border-radius: 8px;
+            background: #1c2333; border: 1px solid var(--border-line);
+            color: #fff; font-size: 12px; font-weight: 600;
+            text-decoration: none;
+        }
+        .tv-link:active { opacity: 0.7; }
+
+        #chart {
+            width: 100%;
+            height: 360px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-line);
+            background: #0a0e1c;
+            position: relative;
+        }
+        #chart-error {
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 12px; height: 100%; padding: 20px; text-align: center;
+        }
+        #chart-error.show { display: flex; }
+        #chart-error .icon { font-size: 48px; opacity: 0.6; }
+        #chart-error .title { font-size: 14px; font-weight: 700; color: #fff; }
+        #chart-error .desc { font-size: 12px; color: #9CA3AF; max-width: 280px; }
+
+        /* ── AI gauges ── */
+        .gauges-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 0 14px 14px;
+        }
+        .gauge-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .gauge-label { font-size: 10px; color: #9CA3AF; letter-spacing: 0.6px; text-transform: uppercase; font-weight: 600; }
+        .gauge-value { font-size: 22px; font-weight: 800; margin-top: 6px; color: #fff; }
+        .gauge-bar {
+            height: 6px; background: rgba(255,255,255,0.06);
+            border-radius: 3px; margin-top: 8px; overflow: hidden;
+        }
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--orange), var(--gold));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .gauge-fill.high { background: linear-gradient(90deg, var(--green), #34D399); }
+        .gauge-fill.medium { background: linear-gradient(90deg, var(--gold), var(--orange)); }
+        .gauge-fill.low { background: linear-gradient(90deg, var(--red), #F87171); }
+
+        /* ── Trade setup card ── */
+        .setup-card {
+            background: linear-gradient(135deg, rgba(16,185,129,0.04), var(--bg-card));
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            margin: 0 14px 14px;
+            padding: 14px;
+        }
+        .setup-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .setup-row:last-child { border-bottom: none; }
+        .setup-label {
+            font-size: 12px; color: #9CA3AF;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .setup-value { font-size: 13px; font-weight: 700; color: #fff; }
+        .setup-value.entry { color: var(--gold-light); }
+        .setup-value.sl { color: var(--red); }
+        .setup-value.tp { color: var(--green); }
+        .setup-value.risk { color: var(--orange); font-size: 11px; }
+
+        /* ── Action buttons ── */
+        .action-bar {
+            padding: 14px;
+            display: flex; gap: 8px;
+            border-top: 1px solid var(--border-line);
+            background: var(--bg-void);
+        }
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: none;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: linear-gradient(135deg, #F0D683 0%, #D4AF37 60%, #C9A227 100%);
+            color: #05070D;
+        }
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: #fff;
+            border: 1px solid var(--border-line);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed; bottom: 80px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-elevated);
+            color: #fff; padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-line);
+            font-size: 12px;
+            opacity: 0; transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+            max-width: 90vw;
+        }
+        .toast.show { opacity: 1; }
+        .toast.success { border-color: var(--green); }
+        .toast.error { border-color: var(--red); }
+
+        /* ── Spinner ── */
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            width: 16px; height: 16px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Loading state ── */
+        .loading-overlay {
+            position: fixed; inset: 0;
+            background: var(--bg-void);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .loading-overlay.hidden { display: none; }
+        .loading-overlay .spinner {
+            width: 32px; height: 32px;
+            border-width: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading overlay shown until signal data is fetched -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- ── Header ── -->
+    <div class="header">
+        <div class="header-logo">S</div>
+        <div>
+            <div class="header-title">SMATTAKER</div>
+            <div class="header-sub" id="symbolLabel">—</div>
+        </div>
+        <button class="header-close" id="closeBtn">×</button>
+    </div>
+
+    <!-- ── Live P&L banner ── -->
+    <div class="pnl-banner" id="pnlBanner" style="display:none;">
+        <div class="pnl-label">LIVE P&L · HAD YOU ENTERED</div>
+        <div class="pnl-value" id="pnlValue">—</div>
+        <div class="pnl-current-price" id="currentPriceLabel">Current: —</div>
+    </div>
+
+    <!-- ── Live chart ── -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <div class="chart-title">
+                <div class="live-dot"></div>
+                LIVE CHART
+            </div>
+            <!-- v45.4.7: symbol is server-VERIFIED (tv_resolver) and links
+                 to the full TradingView chart as a one-tap escape hatch -->
+            <div class="chart-symbol"><a id="chartSymbolLink" href="#" target="_blank" rel="noopener"><span id="chartSymbol">—</span> ↗</a></div>
+        </div>
+        <div id="chart">
+            <div id="chart-error">
+                <div class="icon">📊</div>
+                <div class="title">Chart unavailable</div>
+                <div class="desc" id="chartErrorMsg">Could not load chart for this symbol.</div>
+                <a class="tv-link" id="tvSearchLink" href="#" target="_blank" rel="noopener">🔍 Open on TradingView</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── AI gauges ── -->
+    <div class="gauges-grid">
+        <div class="gauge-card">
+            <div class="gauge-label">🧠 AI CONFIDENCE</div>
+            <div class="gauge-value" id="gaugeConfidence">—</div>
+            <div class="gauge-bar"><div class="gauge-fill" id="gaugeConfidenceFill" style="width:0%"></div></div>
+        </div>
+        <div class="gauge-card">
+            <div class="gauge-label">⚡ R : R</div>
+            <div class="gauge-value" id="gaugeRR">—</div>
+            <div class="gauge-bar"><div class="gauge-fill high" id="gaugeRRFill" style="width:0%"></div></div>
+        </div>
+    </div>
+
+    <!-- ── Trade setup ── -->
+    <div class="setup-card">
+        <div class="setup-row">
+            <div class="setup-label">💼 Entry</div>
+            <div class="setup-value entry" id="setupEntry">—</div>
+        </div>
+        <div class="setup-row">
+            <div class="setup-label">🛡️ Stop Loss</div>
+            <div>
+                <div class="setup-value sl" id="setupSL">—</div>
+                <div class="setup-value risk" id="setupSLPct"></div>
+            </div>
+        </div>
+        <div class="setup-row">
+            <div class="setup-label">🎯 Take Profit</div>
+            <div class="setup-value tp" id="setupTP">—</div>
+        </div>
+        <div class="setup-row">
+            <div class="setup-label">🕐 Candle Time</div>
+            <div class="setup-value" id="setupCandleTime" style="font-size:11px;color:#9CA3AF;">—</div>
+        </div>
+    </div>
+
+    <!-- ── Action buttons ── -->
+    <div class="action-bar">
+        <button class="btn btn-secondary" id="refreshBtn">↻ Refresh</button>
+        <button class="btn btn-primary" id="trackBtn">📥 Track Trade</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+//  SmAttaker Mini App — Signal Details + Live Chart
+// ============================================================================
+//  Loads signal data from the backend API using the Telegram WebApp initData
+//  for authentication, then renders:
+//    1. A TradingView embedded chart with the CORRECT exchange prefix
+//    2. AI gauges (confidence + R:R)
+//    3. Trade setup (entry / SL / TP / candle time)
+//    4. A "Track Trade" button that calls the bot's callback handler
+//
+//  The chart symbol is resolved server-side via
+//  backend.utils.tv_symbols.map_symbol_to_tv() — this is the fix for the
+//  "NASDAQ:SNAP doesn't exist" bug. SNAP trades on NYSE, not NASDAQ; the
+//  map_symbol_to_tv() function knows the difference.
+// ============================================================================
+
+(function() {
+    'use strict';
+
+    // ── Read URL params (signal_id + user_id passed from bot) ──
+    const params = new URLSearchParams(window.location.search);
+    const SIGNAL_ID = params.get('signal_id') || '';
+    const USER_ID = params.get('user_id') || '';
+    const BASE_URL = window.location.origin;  // same origin as the bot backend
+
+    // ── Telegram WebApp setup ──
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready();
+        tg.expand();
+        // Configure the back button — clicking it closes the Mini App
+        if (tg.BackButton) {
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => tg.close());
+        }
+    }
+
+    // ── State ──
+    let signalData = null;
+    let pollTimer = null;
+    let chartWidget = null;
+
+    // ── Helpers ──
+    function $(id) { return document.getElementById(id); }
+
+    function showToast(msg, type) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.className = 'toast show ' + (type || '');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function fmtPrice(p) {
+        if (p == null || isNaN(p)) return '—';
+        p = parseFloat(p);
+        if (Math.abs(p) >= 1000) return '$' + p.toLocaleString('en-US', {maximumFractionDigits: 2});
+        if (Math.abs(p) >= 1) return '$' + p.toFixed(4);
+        if (Math.abs(p) >= 0.01) return '$' + p.toFixed(6);
+        return '$' + p.toFixed(8);
+    }
+
+    function fmtPct(p) {
+        if (p == null || isNaN(p)) return '—';
+        const sign = p >= 0 ? '+' : '';
+        return sign + parseFloat(p).toFixed(2) + '%';
+    }
+
+    function fmtTime(t) {
+        if (!t) return '—';
+        try {
+            const d = new Date(t);
+            return d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+        } catch (e) { return t; }
+    }
+
+    // ── Load signal data ──
+    async function loadSignal() {
+        if (!SIGNAL_ID) {
+            showError('No signal ID provided');
+            return;
+        }
+
+        try {
+            // Use Telegram WebApp initData for authentication if available;
+            // fall back to plain fetch if running outside Telegram (dev mode).
+            const url = `${BASE_URL}/api/signals/${SIGNAL_ID}`;
+            const headers = {};
+            if (tg?.initData) {
+                headers['X-Telegram-Init-Data'] = tg.initData;
+            }
+
+            const resp = await fetch(url, { headers });
+            if (!resp.ok) {
+                const errBody = await resp.json().catch(() => ({}));
+                showError(errBody.detail || `Failed to load signal (${resp.status})`);
+                return;
+            }
+            const data = await resp.json();
+            signalData = data;
+            renderSignal(data);
+            initChart(data);
+            startPolling();
+        } catch (e) {
+            showError('Network error: ' + e.message);
+        } finally {
+            $('loadingOverlay').classList.add('hidden');
+        }
+    }
+
+    function showError(msg) {
+        $('loadingOverlay').classList.add('hidden');
+        $('chart-error').classList.add('show');
+        $('chartErrorMsg').textContent = msg;
+        showToast(msg, 'error');
+    }
+
+    function renderSignal(s) {
+        // Header
+        $('symbolLabel').textContent = `${s.symbol} · ${(s.direction || '').toUpperCase()}`;
+
+        // P&L banner — only show if we have entry_price + current price
+        if (s.entry_price && s.current_price) {
+            const dir = (s.direction || '').toLowerCase();
+            const entry = parseFloat(s.entry_price);
+            const cur = parseFloat(s.current_price);
+            const pnlPct = dir === 'long'
+                ? ((cur - entry) / entry) * 100
+                : ((entry - cur) / entry) * 100;
+            const pnlUsd = (pnlPct / 100) * 100;  // $100 notional for display
+            const banner = $('pnlBanner');
+            const value = $('pnlValue');
+            value.textContent = `${fmtPct(pnlPct)}  ($${pnlUsd >= 0 ? '+' : ''}${pnlUsd.toFixed(2)})`;
+            value.className = 'pnl-value ' + (pnlPct >= 0 ? 'positive' : 'negative');
+            banner.classList.toggle('negative', pnlPct < 0);
+            banner.style.display = 'block';
+            $('currentPriceLabel').textContent = `Current: ${fmtPrice(cur)}`;
+        }
+
+        // Gauges
+        const conf = parseFloat(s.confidence_score || 0);
+        $('gaugeConfidence').textContent = conf.toFixed(1) + '%';
+        const confFill = $('gaugeConfidenceFill');
+        confFill.style.width = Math.min(conf, 100) + '%';
+        confFill.className = 'gauge-fill ' + (conf >= 70 ? 'high' : conf >= 55 ? 'medium' : 'low');
+
+        const rr = parseFloat(s.risk_reward_ratio || 0);
+        $('gaugeRR').textContent = rr ? `1:${rr.toFixed(1)}` : '—';
+        $('gaugeRRFill').style.width = rr ? Math.min(rr * 25, 100) + '%' : '0%';
+
+        // Setup
+        $('setupEntry').textContent = fmtPrice(s.entry_price);
+        $('setupSL').textContent = fmtPrice(s.stop_loss);
+        if (s.stop_loss_pct) {
+            $('setupSLPct').textContent = fmtPct(-Math.abs(parseFloat(s.stop_loss_pct)));
+        }
+        if (s.take_profit_levels && s.take_profit_levels[0]) {
+            $('setupTP').textContent = fmtPrice(s.take_profit_levels[0].price);
+        }
+        $('setupCandleTime').textContent = fmtTime(s.entry_time);
+    }
+
+    // ── TradingView chart ──
+    // v45.4.6: Robust chart initialization with retry + fallback chain.
+    // If the primary tv_symbol fails (TradingView shows "symbol doesn't
+    // exist"), we automatically retry with each fallback from the API
+    // response. Only after all fallbacks fail do we show the error UI.
+    let _tvRetryQueue = [];
+    let _tvCurrentSymbol = '';
+
+    function initChart(s) {
+        // The backend pre-resolves the TradingView symbol via
+        // backend.utils.tv_resolver.resolve_tv_symbol() — VERIFIED against
+        // TradingView's own symbol database server-side (v45.4.7), so the
+        // widget receives a symbol that actually exists (e.g. MEXC for
+        // FARTCOIN, OANDA:XAUUSD for gold). The client-side fallback
+        // queue stays as a second safety net.
+        const tvSymbol = s.tv_symbol || s.symbol || '';
+        const searchSymbol = s.tv_search_symbol || s.symbol || '';
+        const fallbacks = s.tv_fallbacks || [];
+        const chartUrl = s.tv_chart_url ||
+            ('https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(tvSymbol));
+        const searchUrl = s.tv_search_url ||
+            ('https://www.tradingview.com/search/?text=' + encodeURIComponent(searchSymbol));
+
+        // One-tap escape hatches (header link + error-card button)
+        const symLink = $('chartSymbolLink');
+        if (symLink) symLink.href = chartUrl;
+        const searchLink = $('tvSearchLink');
+        if (searchLink) searchLink.href = searchUrl;
+
+        // Build the retry queue: primary symbol first, then fallbacks
+        _tvRetryQueue = [tvSymbol, ...fallbacks].filter(x => x && x.length > 0);
+        _tvCurrentSymbol = '';
+
+        $('chartSymbol').textContent = tvSymbol;
+
+        if (!tvSymbol || !window.TradingView) {
+            $('chart-error').classList.add('show');
+            $('chartErrorMsg').textContent = `Chart unavailable for ${s.symbol || 'this symbol'}`;
+            return;
+        }
+
+        // Try the first symbol in the queue
+        _tryChartSymbol(_tvRetryQueue.shift(), searchSymbol, searchUrl);
+    }
+
+    function _tryChartSymbol(tvSymbol, searchSymbol, searchUrl) {
+        if (!tvSymbol) {
+            $('chart-error').classList.add('show');
+            $('chartErrorMsg').textContent = `Chart unavailable for ${signalData?.symbol || 'this symbol'}.`;
+            return;
+        }
+        _tvCurrentSymbol = tvSymbol;
+        $('chartSymbol').textContent = tvSymbol;
+        // keep the error-card search link pointing at the right query
+        if (searchUrl) {
+            const lnk = document.getElementById('tvSearchLink');
+            if (lnk) lnk.href = searchUrl;
+        }
+
+        // Clear any existing widget
+        $('chart').innerHTML = '';
+        // Re-add the error div (hidden) for future use
+        const errDiv = document.createElement('div');
+        errDiv.id = 'chart-error';
+        errDiv.innerHTML = `
+            <div class="icon">📊</div>
+            <div class="title">Chart unavailable</div>
+            <div class="desc" id="chartErrorMsg">Could not load chart for ${signalData?.symbol || 'this symbol'}.</div>
+            <a class="tv-link" id="tvSearchLink" href="${searchUrl || '#'}" target="_blank" rel="noopener">🔍 Open on TradingView</a>
+        `;
+        $('chart').appendChild(errDiv);
+
+        try {
+            chartWidget = new TradingView.widget({
+                container_id: 'chart',       // the div ID
+                autosize: true,
+                symbol: tvSymbol,
+                interval: '60',              // 1h candles (matches STRATEGY_TIMEFRAME)
+                timezone: 'Etc/UTC',
+                theme: 'dark',
+                style: '1',                  // candlestick chart
+                locale: 'en',
+                toolbar_bg: '#0a0e1c',
+                enable_publishing: false,
+                hide_side_toolbar: true,
+                allow_symbol_change: false,  // user can't change symbol —
+                                              // this is the signal's symbol
+                save_image: false,
+                details: false,
+                studies: [
+                    'RSI@tv-basicstudies',
+                    'MASimple@tv-basicstudies'
+                ],
+                // v45.4.7: Retry with the next fallback symbol instead of
+                // giving up. NOTE: the free embed does not reliably fire
+                // this callback — the PRIMARY guarantee is the server-side
+                // verified symbol (backend.utils.tv_resolver). This queue
+                // is a best-effort second net only.
+                on_symbol_not_found: () => {
+                    console.warn(`[SmAttaker Mini App] TradingView symbol not found: ${tvSymbol}`);
+                    if (_tvRetryQueue.length > 0) {
+                        const next = _tvRetryQueue.shift();
+                        console.info(`[SmAttaker Mini App] Retrying with fallback: ${next}`);
+                        // Small delay so the previous widget fully tears down
+                        setTimeout(() => _tryChartSymbol(next, searchSymbol, searchUrl), 100);
+                    } else {
+                        $('chart-error').classList.add('show');
+                        $('chartErrorMsg').textContent =
+                            `Symbol "${tvSymbol}" not found. Try searching for "${searchSymbol}" on TradingView.`;
+                    }
+                }
+            });
+        } catch (e) {
+            $('chart-error').classList.add('show');
+            $('chartErrorMsg').textContent = 'Failed to initialize chart: ' + e.message;
+        }
+    }
+
+    // ── Live P&L polling ──
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(refreshPnL, 15000);  // 15s — same as live dashboard
+    }
+
+    async function refreshPnL() {
+        if (!signalData) return;
+        try {
+            const resp = await fetch(`${BASE_URL}/api/signals/${SIGNAL_ID}/live`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.current_price != null) {
+                signalData.current_price = data.current_price;
+                renderSignal(signalData);
+            }
+        } catch (e) { /* silent — best-effort */ }
+    }
+
+    // ── Track Trade button ──
+    $('trackBtn').addEventListener('click', async () => {
+        const btn = $('trackBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Tracking...';
+
+        try {
+            // Call the API to track the trade (this is the same logic the
+            // bot's "Track Trade" inline button uses, just over HTTP).
+            const resp = await fetch(`${BASE_URL}/api/signals/${SIGNAL_ID}/track`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(tg?.initData ? {'X-Telegram-Init-Data': tg.initData} : {}),
+                },
+                body: JSON.stringify({
+                    user_id: USER_ID,
+                    account_type: 'auto',
+                }),
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success !== false) {
+                showToast('✅ Trade tracked! You\'ll be notified on TP/SL hit.', 'success');
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                btn.innerHTML = '✅ Tracked';
+                btn.disabled = true;
+            } else {
+                const errMsg = data.detail || data.error || 'Failed to track trade';
+                showToast(errMsg, 'error');
+                if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                btn.disabled = false;
+                btn.innerHTML = '📥 Track Trade';
+            }
+        } catch (e) {
+            showToast('Network error: ' + e.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '📥 Track Trade';
+        }
+    });
+
+    // ── Refresh button ──
+    $('refreshBtn').addEventListener('click', () => {
+        if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        loadSignal();
+    });
+
+    // ── Close button ──
+    $('closeBtn').addEventListener('click', () => {
+        if (tg) tg.close();
+        else window.close();
+    });
+
+    // ── Boot ──
+    loadSignal();
+})();
+</script>
+</body>
+</html>

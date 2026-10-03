@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "LTC",
+  "train_end_date": "2025-08-24",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T22:18:09.350258Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 44,
+      "cv_auc": 0.6570640462574271,
+      "baseline_wr": 42.390078917700116,
+      "best_wr": 48.588410104011885,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 41,
+      "cv_auc": 0.6491386936085108,
+      "baseline_wr": 51.746031746031754,
+      "best_wr": 56.97211155378486,
+      "inverted": false
+    }
+  },
+  "n_train_trades": 1202,
+  "n_total_bars": 17485,
+  "is_period": {
+    "start": "2024-08-25",
+    "end": "2025-08-24"
+  },
+  "oos_period": {
+    "start": "2025-08-24",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "LTC-USD",
+  "asset_class": "crypto"
+}

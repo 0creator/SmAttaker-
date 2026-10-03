@@ -1,0 +1,54 @@
+{
+  "version": "v45.4.1",
+  "symbol": "FET",
+  "train_end_date": "2025-08-24",
+  "cycle_tag": "final",
+  "saved_at": "2026-08-24T22:19:48.367764Z",
+  "strategy_config": {
+    "TP_RR": 2.0,
+    "SL_ATR": 2.0,
+    "MAX_BARS": 8,
+    "RISK_PER_TRADE": 0.01,
+    "MAX_POSITIONS": 5
+  },
+  "meta_config": {
+    "META_N_FOLDS": 3,
+    "META_EMBARGO_BARS": 8,
+    "META_N_SEEDS": 3,
+    "META_USE_FEATURE_SELECTION": true,
+    "META_TOP_K_FEATURES": 25,
+    "META_USE_CALIBRATION": true,
+    "META_INVERT_IF_AUC_BELOW": 0.52,
+    "META_MIN_AUC_TO_FILTER": 0.52,
+    "META_WR_TARGET_MULT": 1.1
+  },
+  "sides": {
+    "LONG": {
+      "n_features": 44,
+      "cv_auc": 0.5784112664507336,
+      "baseline_wr": 44.41379310344827,
+      "best_wr": 49.249249249249246,
+      "inverted": false
+    },
+    "SHORT": {
+      "n_features": 42,
+      "cv_auc": 0.49663174043829167,
+      "baseline_wr": 46.717171717171716,
+      "best_wr": 48.30508474576271,
+      "inverted": true
+    }
+  },
+  "n_train_trades": 1121,
+  "n_total_bars": 17484,
+  "is_period": {
+    "start": "2024-08-25",
+    "end": "2025-08-24"
+  },
+  "oos_period": {
+    "start": "2025-08-24",
+    "end": "2026-08-24"
+  },
+  "best_overall_mode": "STRICT-FILTER-OPT",
+  "data_ticker": "FET-USD",
+  "asset_class": "crypto"
+}

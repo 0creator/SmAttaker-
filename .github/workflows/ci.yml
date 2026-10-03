@@ -1,0 +1,53 @@
+name: Backend Sanity Checks
+
+# Runs on every push and pull request. This is the automated version of
+# the exact manual checks that caught every production-breaking bug
+# during development (NameError from missing imports, syntax errors) —
+# now enforced BEFORE code reaches Render instead of discovered live.
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  static-checks:
+    name: Syntax & undefined-name check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run static sanity checker
+        run: python3 scripts/check_backend.py
+
+      - name: Verify all backend files at least compile
+        run: |
+          find backend -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+
+  requirements-check:
+    name: Dependency conflict check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dry-run pip install to catch version conflicts
+        run: |
+          python3 -m venv /tmp/ci-venv
+          source /tmp/ci-venv/bin/activate
+          pip install --upgrade pip
+          # --dry-run catches resolver conflicts (like the aiohttp/ccxt
+          # pin mismatch that broke a Render build) without actually
+          # installing 40+ packages, keeping CI fast.
+          pip install --dry-run -r requirements.txt
